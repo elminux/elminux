@@ -68,3 +68,6 @@ coverage/
 *.su
 *.idb
 *.pdb
+.skill/
+.cursor/rules/skill-context.md
+.windsurf/rules/skill-context.md

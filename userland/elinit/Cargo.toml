@@ -1,0 +1,13 @@
+[package]
+name = "elinit"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "elinit"
+path = "src/main.rs"
+
+[dependencies]
+elminux-std = { path = "../elminux-std" }

@@ -1,0 +1,14 @@
+[package]
+name = "elminux-sched"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+elminux-hal = { path = "../elminux-hal" }
+elminux-mm = { path = "../elminux-mm" }
+
+[lib]
+name = "elminux_sched"
+path = "src/lib.rs"

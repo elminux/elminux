@@ -1,0 +1,12 @@
+[package]
+name = "elminux-std"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+
+[lib]
+name = "elminux_std"
+path = "src/lib.rs"

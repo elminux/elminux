@@ -1,0 +1,23 @@
+[package]
+name = "elminux-kernel"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "elminux-kernel"
+path = "src/main.rs"
+
+[dependencies]
+elminux-hal = { path = "../elminux-hal" }
+elminux-mm = { path = "../elminux-mm" }
+elminux-sched = { path = "../elminux-sched" }
+elminux-ipc = { path = "../elminux-ipc" }
+elminux-syscall = { path = "../elminux-syscall" }
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"

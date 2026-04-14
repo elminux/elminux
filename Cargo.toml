@@ -1,0 +1,43 @@
+[workspace]
+name = "elminux"
+version = "0.1.0"
+edition = "2021"
+authors = ["Elminux Contributors <contributors@elminux.org>"]
+license = "GPL-3.0"
+repository = "https://github.com/elminux/elminux"
+homepage = "https://elminux.org"
+description = "An experimental operating system for sovereignty and real-world deployment"
+resolver = "2"
+
+members = [
+    "kernel/elminux-kernel",
+    "kernel/elminux-hal",
+    "kernel/elminux-mm",
+    "kernel/elminux-sched",
+    "kernel/elminux-ipc",
+    "kernel/elminux-drivers",
+    "kernel/elminux-syscall",
+    "userland/elminux-std",
+    "userland/epkg",
+    "userland/elinit",
+    "userland/modsh",
+    "tools/build-tools",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0"
+repository = "https://github.com/elminux/elminux"
+
+[profile.dev]
+opt-level = 1
+overflow-checks = false
+lto = false
+debug = true
+
+[profile.release]
+opt-level = 3
+overflow-checks = false
+lto = true
+debug = false

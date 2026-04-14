@@ -1,0 +1,14 @@
+[package]
+name = "elminux-ipc"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+elminux-hal = { path = "../elminux-hal" }
+elminux-mm = { path = "../elminux-mm" }
+
+[lib]
+name = "elminux_ipc"
+path = "src/lib.rs"

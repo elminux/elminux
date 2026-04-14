@@ -1,0 +1,13 @@
+[package]
+name = "elminux-mm"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+elminux-hal = { path = "../elminux-hal" }
+
+[lib]
+name = "elminux_mm"
+path = "src/lib.rs"

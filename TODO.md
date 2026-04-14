@@ -23,42 +23,42 @@ Status tags: [ ] todo | [x] done | [~] in-progress | [!] blocked
 - [x] 1.10 Write PR template with checklist
 
 ### 2. Toolchain & Workspace Setup
-- [ ] 2.1 Initialize Cargo workspace (`Cargo.toml`)
-- [ ] 2.2 Pin Rust nightly toolchain (`rust-toolchain.toml`)
-  - [ ] 2.2.1 Channel: nightly
-  - [ ] 2.2.2 Components: rust-src, llvm-tools-preview, rustfmt, clippy
-  - [ ] 2.2.3 Target: x86_64-unknown-none
-- [ ] 2.3 Add `cargo install cargo-binstall` to dev setup docs
-- [ ] 2.4 Add `cargo install cargo-skill` to dev setup docs
-- [ ] 2.5 Configure `.cargo/config.toml`
-  - [ ] 2.5.1 Default target: x86_64-unknown-none
-  - [ ] 2.5.2 Build std: `build-std = ["core", "alloc", "compiler_builtins"]`
-  - [ ] 2.5.3 Linker: rust-lld
-- [ ] 2.6 Configure linker script (`kernel/linker.ld`) — kernel memory layout
-- [ ] 2.7 Add Limine bootloader as build dependency
-  - [ ] 2.7.1 Pin Limine version
-  - [ ] 2.7.2 Write Limine config (`limine.cfg`)
-- [ ] 2.8 Write `Makefile` with targets
-  - [ ] 2.8.1 `make qemu` — build + run QEMU
-  - [ ] 2.8.2 `make iso` — produce bootable ISO
-  - [ ] 2.8.3 `make test` — QEMU headless unit tests
-  - [ ] 2.8.4 `make clippy` — lint all crates
-  - [ ] 2.8.5 `make doc` — generate docs
-  - [ ] 2.8.6 `make clean`
-- [ ] 2.9 Scaffold all crates (empty `lib.rs` / `main.rs`, `Cargo.toml`)
-  - [ ] 2.9.1 `kernel/elminux-kernel`
-  - [ ] 2.9.2 `kernel/elminux-hal`
-  - [ ] 2.9.3 `kernel/elminux-mm`
-  - [ ] 2.9.4 `kernel/elminux-sched`
-  - [ ] 2.9.5 `kernel/elminux-ipc`
-  - [ ] 2.9.6 `kernel/elminux-drivers`
-  - [ ] 2.9.7 `kernel/elminux-syscall`
-  - [ ] 2.9.8 `userland/elminux-std`
-  - [ ] 2.9.9 `userland/epkg`
-  - [ ] 2.9.10 `userland/elinit`
-  - [ ] 2.9.11 `userland/modsh` (submodule: github.com/modsh-shell/modsh)
-  - [ ] 2.9.12 `tools/build-tools`
-- [ ] 2.10 Verify workspace builds cleanly (no code yet — structure only)
+- [x] 2.1 Initialize Cargo workspace (`Cargo.toml`)
+- [x] 2.2 Pin Rust nightly toolchain (`rust-toolchain.toml`)
+  - [x] 2.2.1 Channel: nightly
+  - [x] 2.2.2 Components: rust-src, llvm-tools-preview, rustfmt, clippy
+  - [x] 2.2.3 Target: x86_64-unknown-none
+- [x] 2.3 Add `cargo install cargo-binstall` to dev setup docs
+- [x] 2.4 Add `cargo install cargo-skill` to dev setup docs
+- [x] 2.5 Configure `.cargo/config.toml`
+  - [x] 2.5.1 Default target: x86_64-unknown-none
+  - [x] 2.5.2 Build std: `build-std = ["core", "alloc", "compiler_builtins"]`
+  - [x] 2.5.3 Linker: rust-lld
+- [x] 2.6 Configure linker script (`kernel/linker.ld`) — kernel memory layout
+- [x] 2.7 Add Limine bootloader as build dependency
+  - [x] 2.7.1 Pin Limine version
+  - [x] 2.7.2 Write Limine config (`limine.cfg`)
+- [x] 2.8 Write `Makefile` with targets
+  - [x] 2.8.1 `make qemu` — build + run QEMU
+  - [x] 2.8.2 `make iso` — produce bootable ISO
+  - [x] 2.8.3 `make test` — QEMU headless unit tests
+  - [x] 2.8.4 `make clippy` — lint all crates
+  - [x] 2.8.5 `make doc` — generate docs
+  - [x] 2.8.6 `make clean`
+- [x] 2.9 Scaffold all crates (empty `lib.rs` / `main.rs`, `Cargo.toml`)
+  - [x] 2.9.1 `kernel/elminux-kernel`
+  - [x] 2.9.2 `kernel/elminux-hal`
+  - [x] 2.9.3 `kernel/elminux-mm`
+  - [x] 2.9.4 `kernel/elminux-sched`
+  - [x] 2.9.5 `kernel/elminux-ipc`
+  - [x] 2.9.6 `kernel/elminux-drivers`
+  - [x] 2.9.7 `kernel/elminux-syscall`
+  - [x] 2.9.8 `userland/elminux-std`
+  - [x] 2.9.9 `userland/epkg`
+  - [x] 2.9.10 `userland/elinit`
+  - [x] 2.9.11 `userland/modsh` (submodule: [modsh](https://github.com/modsh-shell/modsh))
+  - [x] 2.9.12 `tools/build-tools`
+- [x] 2.10 Verify workspace builds cleanly (no code yet — structure only)
 
 ### 3. CI/CD Pipeline
 - [ ] 3.1 GitHub Actions: build + clippy on every PR

@@ -1,0 +1,15 @@
+[package]
+name = "elminux-syscall"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+elminux-hal = { path = "../elminux-hal" }
+elminux-sched = { path = "../elminux-sched" }
+elminux-ipc = { path = "../elminux-ipc" }
+
+[lib]
+name = "elminux_syscall"
+path = "src/lib.rs"
