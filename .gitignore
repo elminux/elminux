@@ -1,0 +1,70 @@
+# Rust
+target/
+Cargo.lock
+crates/**/Cargo.lock
+**/*.rs.bk
+*.rlib
+*.rmeta
+
+# Build artifacts
+*.o
+*.elf
+*.bin
+*.img
+*.iso
+*.sys
+*.efi
+*.vmdk
+*.qcow2
+disk/
+build/
+dist/
+out/
+
+# Limine bootloader
+limine/
+*.hdd
+
+# QEMU
+*.qemu
+qemu.log
+
+# IDE
+.vscode/
+.idea/
+.windsurf/
+*.swp
+*.swo
+*~
+.*.swp
+.*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Environment
+.env
+.env.local
+
+# Documentation build
+docs/_build/
+docs/_static/
+docs/_templates/
+
+# Test artifacts
+test-results/
+coverage/
+*.profraw
+*.profdata
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb

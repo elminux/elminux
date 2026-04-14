@@ -11,16 +11,16 @@ Status tags: [ ] todo | [x] done | [~] in-progress | [!] blocked
 ## v0.1.0 — Governance & Toolchain
 
 ### 1. Legal & Governance
-- [ ] 1.1 Commit LICENSE (GPL-3.0)
-- [ ] 1.2 Write CONTRIBUTORS.md (DCO, no CLA)
-- [ ] 1.3 Write CODE_OF_CONDUCT.md (Contributor Covenant 2.1)
-- [ ] 1.4 Write SECURITY.md (vulnerability disclosure + CVE SLA)
+- [x] 1.1 Commit LICENSE (GPL-3.0)
+- [x] 1.2 Write CONTRIBUTING.md (ECC v1.0 — Elminux Contributor Certificate, no CLA)
+- [x] 1.3 Write CODE_OF_CONDUCT.md (Contributor Covenant 2.1)
+- [x] 1.4 Write SECURITY.md (vulnerability disclosure + CVE SLA)
 - [x] 1.5 Confirm project name: Elminux
 - [x] 1.6 Register domain (elminux.org)
 - [x] 1.7 Set up GitHub org (github.com/elminux)
-- [ ] 1.8 Configure branch protection (main, dev)
-- [ ] 1.9 Write issue templates (bug, kernel-panic, driver-request, abi-question)
-- [ ] 1.10 Write PR template with checklist
+- [x] 1.8 Configure branch protection (main, dev)
+- [x] 1.9 Write issue templates (bug, kernel-panic, driver-request, abi-question)
+- [x] 1.10 Write PR template with checklist
 
 ### 2. Toolchain & Workspace Setup
 - [ ] 2.1 Initialize Cargo workspace (`Cargo.toml`)
