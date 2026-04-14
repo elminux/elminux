@@ -2,301 +2,403 @@
 
 Standard: OSS SDLC / DevSecOps
 Versioning: SemVer 2.0.0
-Base: Debian Stable (Bookworm 12.x)
-Build toolchain: live-build
+Language: Rust (nightly, x86_64-unknown-none)
+Kernel model: Hybrid (trusted core in kernel space, drivers in user space)
 Status tags: [ ] todo | [x] done | [~] in-progress | [!] blocked
 
 ---
 
-## v0.1.0 — Governance & Foundation
+## v0.1.0 — Governance & Toolchain
 
 ### 1. Legal & Governance
 - [ ] 1.1 Commit LICENSE (GPL-3.0)
-- [ ] 1.2 Write CONTRIBUTORS.md (DCO — Developer Certificate of Origin, no CLA)
+- [ ] 1.2 Write CONTRIBUTORS.md (DCO, no CLA)
 - [ ] 1.3 Write CODE_OF_CONDUCT.md (Contributor Covenant 2.1)
-- [ ] 1.4 Write SECURITY.md (vulnerability disclosure policy + CVE response SLA)
+- [ ] 1.4 Write SECURITY.md (vulnerability disclosure + CVE SLA)
 - [x] 1.5 Confirm project name: Elminux
-- [x] 1.6 Register domain (elminux.org secured)
-- [x] 1.7 Set up GitHub org (github.com/elminux secured)
+- [x] 1.6 Register domain (elminux.org)
+- [x] 1.7 Set up GitHub org (github.com/elminux)
 - [ ] 1.8 Configure branch protection (main, dev)
-- [ ] 1.9 Write issue templates (bug, feature-request, hardware-support, locale-request)
+- [ ] 1.9 Write issue templates (bug, kernel-panic, driver-request, abi-question)
 - [ ] 1.10 Write PR template with checklist
 
-### 2. Requirements & Research
-- [ ] 2.1 Compile hardware support matrix from Debian HCL + recycled PC surveys
-- [ ] 2.2 Survey existing LMIC Linux users (min 3 regions: Africa, SE Asia, Latin America)
-- [ ] 2.3 Define formal package inclusion criteria
-  - [ ] 2.3.1 Must be in Debian main (no non-free by default)
-  - [ ] 2.3.2 Must be offline-capable
-  - [ ] 2.3.3 Must function on minimum hardware profile
-- [ ] 2.4 Define threat model document
-- [ ] 2.5 Define initial locale group (see ARCHITECTURE.md)
-- [ ] 2.6 Competitive audit: Endless OS, Raspberry Pi OS, Trisquel, Sugar
----
+### 2. Toolchain & Workspace Setup
+- [ ] 2.1 Initialize Cargo workspace (`Cargo.toml`)
+- [ ] 2.2 Pin Rust nightly toolchain (`rust-toolchain.toml`)
+  - [ ] 2.2.1 Channel: nightly
+  - [ ] 2.2.2 Components: rust-src, llvm-tools-preview, rustfmt, clippy
+  - [ ] 2.2.3 Target: x86_64-unknown-none
+- [ ] 2.3 Add `cargo install cargo-binstall` to dev setup docs
+- [ ] 2.4 Add `cargo install cargo-skill` to dev setup docs
+- [ ] 2.5 Configure `.cargo/config.toml`
+  - [ ] 2.5.1 Default target: x86_64-unknown-none
+  - [ ] 2.5.2 Build std: `build-std = ["core", "alloc", "compiler_builtins"]`
+  - [ ] 2.5.3 Linker: rust-lld
+- [ ] 2.6 Configure linker script (`kernel/linker.ld`) — kernel memory layout
+- [ ] 2.7 Add Limine bootloader as build dependency
+  - [ ] 2.7.1 Pin Limine version
+  - [ ] 2.7.2 Write Limine config (`limine.cfg`)
+- [ ] 2.8 Write `Makefile` with targets
+  - [ ] 2.8.1 `make qemu` — build + run QEMU
+  - [ ] 2.8.2 `make iso` — produce bootable ISO
+  - [ ] 2.8.3 `make test` — QEMU headless unit tests
+  - [ ] 2.8.4 `make clippy` — lint all crates
+  - [ ] 2.8.5 `make doc` — generate docs
+  - [ ] 2.8.6 `make clean`
+- [ ] 2.9 Scaffold all crates (empty `lib.rs` / `main.rs`, `Cargo.toml`)
+  - [ ] 2.9.1 `kernel/elminux-kernel`
+  - [ ] 2.9.2 `kernel/elminux-hal`
+  - [ ] 2.9.3 `kernel/elminux-mm`
+  - [ ] 2.9.4 `kernel/elminux-sched`
+  - [ ] 2.9.5 `kernel/elminux-ipc`
+  - [ ] 2.9.6 `kernel/elminux-drivers`
+  - [ ] 2.9.7 `kernel/elminux-syscall`
+  - [ ] 2.9.8 `userland/elminux-std`
+  - [ ] 2.9.9 `userland/epkg`
+  - [ ] 2.9.10 `userland/elinit`
+  - [ ] 2.9.11 `userland/elsh`
+  - [ ] 2.9.12 `tools/build-tools`
+- [ ] 2.10 Verify workspace builds cleanly (no code yet — structure only)
 
-## v0.2.0 — Build System
-
-### 3. Build Infrastructure
-- [ ] 3.1 Set up Dockerfile.builder (Debian Bookworm, live-build installed)
-- [ ] 3.2 Create Makefile with build targets
-  - [ ] 3.2.1 `make build PROFILE=x86-min`
-  - [ ] 3.2.2 `make build PROFILE=x86-std`
-  - [ ] 3.2.3 `make build PROFILE=arm64-rpi`
-  - [ ] 3.2.4 `make build PROFILE=live-usb`
-  - [ ] 3.2.5 `make build PROFILE=headless`
-- [ ] 3.3 Write lb_config base configuration
-  - [ ] 3.3.1 Debian Bookworm stable as base
-  - [ ] 3.3.2 GRUB2 bootloader (BIOS + UEFI dual support)
-  - [ ] 3.3.3 systemd init
-  - [ ] 3.3.4 apt sources: Debian main + security only (no contrib/non-free by default)
-- [ ] 3.4 Write per-profile package lists
-  - [ ] 3.4.1 x86-min package list (absolute minimum viable desktop)
-  - [ ] 3.4.2 x86-std package list (comfortable daily use)
-  - [ ] 3.4.3 arm64-rpi package list (RPi firmware + standard)
-  - [ ] 3.4.4 live-usb package list (ephemeral, persistence optional)
-  - [ ] 3.4.5 headless package list (no desktop, server tools)
-- [ ] 3.5 Implement A/B partition layout script
-- [ ] 3.6 Implement /data persistent partition setup
-- [ ] 3.7 Produce bootable ISO from CI (x86-std first)
-
-### 4. CI/CD Pipeline
-- [ ] 4.1 Set up GitHub Actions
-  - [ ] 4.1.1 Build job (matrix: x86-min, x86-std, arm64-rpi, live-usb)
-  - [ ] 4.1.2 Shellcheck lint job
-  - [ ] 4.1.3 SBOM generation (syft, CycloneDX format)
-  - [ ] 4.1.4 CVE scan (grype against SBOM)
-  - [ ] 4.1.5 ISO checksum + GPG signing
-  - [ ] 4.1.6 Artifact upload to release
-- [ ] 4.2 Set up release pipeline (tag → build → sign → publish)
-- [ ] 4.3 Set up reproducibility verification (hash comparison across two independent builds)
+### 3. CI/CD Pipeline
+- [ ] 3.1 GitHub Actions: build + clippy on every PR
+- [ ] 3.2 GitHub Actions: QEMU boot smoke test (headless)
+- [ ] 3.3 GitHub Actions: doc build verification
+- [ ] 3.4 GitHub Actions: `deny.toml` — license + advisory check (cargo-deny)
+- [ ] 3.5 GitHub Actions: SBOM generation (cargo-cyclonedx)
+- [ ] 3.6 Release pipeline: tag → build ISO → GPG sign → publish
 
 ---
 
-## v0.3.0 — Hardware Support Layer
+## v0.2.0 — Kernel Boot (QEMU)
 
-### 5. Kernel & Drivers
-- [ ] 5.1 Use Debian linux-image-generic (Bookworm default)
-- [ ] 5.2 Add firmware-linux-free package
-- [ ] 5.3 Evaluate firmware-linux-nonfree inclusion
-  - [ ] 5.3.1 Policy decision: separate non-free profile vs default-include
-  - [ ] 5.3.2 Document non-free driver list + rationale
-- [ ] 5.4 Test boot on minimum hardware targets
-  - [ ] 5.4.1 Pentium 4 era x86_64 with 512MB RAM
-  - [ ] 5.4.2 Core 2 Duo era x86_64 with 1GB RAM
-  - [ ] 5.4.3 Raspberry Pi 4 (2GB)
-- [ ] 5.5 Configure low-memory kernel parameters (x86-min profile)
-  - [ ] 5.5.1 vm.swappiness tuning
-  - [ ] 5.5.2 Disable unused kernel modules
-  - [ ] 5.5.3 zram swap (compressed RAM swap, critical for 512MB)
+### 4. Hardware Abstraction Layer (`elminux-hal`)
+- [ ] 4.1 Implement kernel entry point (`_start`) — Limine protocol
+- [ ] 4.2 Implement GDT (Global Descriptor Table)
+  - [ ] 4.2.1 Kernel code + data segments
+  - [ ] 4.2.2 User code + data segments
+  - [ ] 4.2.3 TSS (Task State Segment)
+- [ ] 4.3 Implement IDT (Interrupt Descriptor Table)
+  - [ ] 4.3.1 CPU exception handlers (0–31)
+  - [ ] 4.3.2 Panic handler for unhandled exceptions
+  - [ ] 4.3.3 IRQ stubs (32+)
+- [ ] 4.4 Implement basic serial output (UART 16550)
+  - [ ] 4.4.1 `write_byte`, `write_str` to COM1
+  - [ ] 4.4.2 Kernel `print!` / `println!` macros via serial
+- [ ] 4.5 Implement APIC (Advanced Programmable Interrupt Controller)
+  - [ ] 4.5.1 Disable legacy PIC (8259)
+  - [ ] 4.5.2 Initialize local APIC
+  - [ ] 4.5.3 APIC timer (preemption clock)
+- [ ] 4.6 Basic ACPI table parsing (RSDP → RSDT/XSDT)
+  - [ ] 4.6.1 Locate RSDP from Limine
+  - [ ] 4.6.2 Parse MADT (interrupt routing)
+- [ ] 4.7 Port I/O primitives (`inb`, `outb`, `inw`, `outw`, `inl`, `outl`)
+- [ ] 4.8 MMIO read/write primitives (volatile, fenced)
+- [ ] 4.9 Milestone: kernel boots in QEMU, prints "Elminux v0.2.0" via serial
 
-### 6. Performance Tuning (Constrained Hardware)
-- [ ] 6.1 Configure zram on all profiles (2x RAM compressed swap)
-- [ ] 6.2 Configure preload / readahead tuning
-- [ ] 6.3 Disable unnecessary systemd services by default
-- [ ] 6.4 Configure LXQt compositor (disable effects on x86-min)
-- [ ] 6.5 Benchmark boot time on minimum hardware (target: <30s)
-- [ ] 6.6 Benchmark idle RAM on minimum hardware (target: <150MB)
-
----
-
-## v0.4.0 — Desktop & Applications
-
-### 7. Desktop Environment
-- [ ] 7.1 Install LXQt (latest stable in Bookworm)
-- [ ] 7.2 Configure SDDM (minimal theme, low resource)
-- [ ] 7.3 Create Elminux default theme
-  - [ ] 7.3.1 Wallpaper (community-contributed, license-clear)
-  - [ ] 7.3.2 Icon theme (lightweight)
-  - [ ] 7.3.3 GTK/Qt theme (coherent, low-resource)
-- [ ] 7.4 Configure default panel layout (taskbar, application menu)
-- [ ] 7.5 Configure application menu (category-organized, translated)
-
-### 8. Default Applications
-- [ ] 8.1 Firefox ESR
-  - [ ] 8.1.1 Pre-configure offline documentation bookmark set
-  - [ ] 8.1.2 Disable telemetry by default
-  - [ ] 8.1.3 Configure uBlock Origin pre-installed
-- [ ] 8.2 LibreOffice (minimal profile: Writer, Calc, Impress only)
-  - [ ] 8.2.1 Disable Java dependency (use built-in Base alternative)
-  - [ ] 8.2.2 Pre-configure for low RAM (disable Java, reduce cache)
-- [ ] 8.3 VLC (video/audio)
-- [ ] 8.4 Geany (text editor, lightweight IDE-capable)
-- [ ] 8.5 PCManFM (file manager)
-- [ ] 8.6 LXTerminal
-- [ ] 8.7 Gpicview or gThumb (image viewer)
-- [ ] 8.8 Evince (PDF viewer)
-- [ ] 8.9 Transmission-gtk (torrent — important for offline content distribution)
-
-### 9. Offline Content Bundle (Optional ISO Layer)
-- [ ] 9.1 Kiwix integration (offline Wikipedia, offline content)
-  - [ ] 9.1.1 Pre-bundle Wikipedia mini (text-only, top languages)
-  - [ ] 9.1.2 Bundle local Kiwix library browser
-- [ ] 9.2 Khan Academy Lite or KA-Lite (offline education, optional)
-- [ ] 9.3 Document offline content update via USB procedure
+### 5. Memory Manager (`elminux-mm`)
+- [ ] 5.1 Physical memory manager
+  - [ ] 5.1.1 Parse memory map from Limine boot info
+  - [ ] 5.1.2 Implement buddy allocator (frame granularity: 4KB)
+  - [ ] 5.1.3 `alloc_frame()` / `free_frame()`
+  - [ ] 5.1.4 Track reserved regions (kernel, firmware, ACPI)
+- [ ] 5.2 Virtual memory manager
+  - [ ] 5.2.1 4-level page table walker (PML4 → PDPT → PD → PT)
+  - [ ] 5.2.2 `map_page(virt, phys, flags)`
+  - [ ] 5.2.3 `unmap_page(virt)`
+  - [ ] 5.2.4 Higher-half kernel mapping
+  - [ ] 5.2.5 TLB flush on unmap
+- [ ] 5.3 Kernel heap allocator
+  - [ ] 5.3.1 Slab allocator for fixed-size kernel objects
+  - [ ] 5.3.2 Global allocator registration (`#[global_allocator]`)
+  - [ ] 5.3.3 `alloc` crate available in kernel
+- [ ] 5.4 Milestone: kernel allocates heap objects, no panics
 
 ---
 
-## v0.5.0 — Security Hardening
+## v0.3.0 — Scheduling & Process Model
 
-### 10. OS Hardening
-- [ ] 10.1 Enable AppArmor (enforcing mode, upstream Debian profiles)
-- [ ] 10.2 Configure ufw (default-deny inbound, allow established)
-- [ ] 10.3 Configure auditd (default Debian rules)
-- [ ] 10.4 Disable unused network services by default
-- [ ] 10.5 Configure automatic security updates (unattended-upgrades)
-  - [ ] 10.5.1 Security-only, not full upgrades
-  - [ ] 10.5.2 Configurable: on/off, LAN-relay aware
-- [ ] 10.6 Write idempotent hardening.sh script
-- [ ] 10.7 Validate against CIS Debian Linux Benchmark (Level 1)
+### 6. Scheduler (`elminux-sched`)
+- [ ] 6.1 Define `Task` struct (id, state, stack, registers, priority)
+- [ ] 6.2 Implement kernel stack allocation per task
+- [ ] 6.3 Implement context switch (save/restore registers, x86_64 ABI)
+- [ ] 6.4 Implement round-robin scheduler (initial)
+  - [ ] 6.4.1 Run queue (VecDeque of ready tasks)
+  - [ ] 6.4.2 `schedule()` — pick next task
+  - [ ] 6.4.3 APIC timer interrupt → `schedule()`
+- [ ] 6.5 Task states: Running, Ready, Blocked, Dead
+- [ ] 6.6 `sys_yield()` — voluntary preemption
+- [ ] 6.7 `sys_exit()` — task termination + cleanup
+- [ ] 6.8 Idle task (runs when no other task is ready)
+- [ ] 6.9 Milestone: two kernel tasks context-switching in QEMU
 
-### 11. Update Security
-- [ ] 11.1 Verify apt uses Debian signed repos by default
-- [ ] 11.2 Implement GPG verification for any Elminux overlay packages
-- [ ] 11.3 Implement A/B rollback on failed boot
-- [ ] 11.4 Document air-gap update procedure (USB apt offline)
-- [ ] 11.5 Configure apt-cacher-ng for LAN relay deployment
+### 7. Performance Benchmarks (v0.3.0 gate)
+- [ ] 7.0 Set up benchmark harness (QEMU serial output, TSC-based timing)
+- [ ] 7.1 Benchmark: syscall round-trip (`sys_yield()`)
+  - [ ] 7.1.1 Target: < 200ns
+  - [ ] 7.1.2 Baseline recorded, added to CI performance log
+- [ ] 7.2 Benchmark: IPC round-trip (send + recv single message)
+  - [ ] 7.2.1 Target: < 500ns
+  - [ ] 7.2.2 Baseline recorded, added to CI performance log
+- [ ] 7.3 Benchmark: `alloc_frame()` + `free_frame()` cycle
+  - [ ] 7.3.1 Target: < 100ns
+- [ ] 7.4 Benchmark: page map + unmap cycle
+  - [ ] 7.4.1 Target: < 500ns
+- [ ] 7.5 Benchmark: boot to kernel entry (QEMU, TSC delta)
+  - [ ] 7.5.1 Target: < 500ms to kernel `_start`
+- [ ] 7.6 Measure kernel binary size (stripped ELF)
+  - [ ] 7.6.1 Target: < 1MB
+- [ ] 7.7 Measure idle memory footprint post-boot
+  - [ ] 7.7.1 Target: < 16MB
+- [ ] 7.8 Add performance regression check to CI
+  - [ ] 7.8.1 >20% regression on any target = build failure
+  - [ ] 7.8.2 Publish benchmark results in release notes
 
----
-
-## v0.6.0 — Locale & Language Layer
-
-### 12. First-Run Wizard
-- [ ] 12.1 Build first-run wizard (Python + GTK or shell + dialog)
-  - [ ] 12.1.1 Step 1: Language selection
-  - [ ] 12.1.2 Step 2: Region / timezone
-  - [ ] 12.1.3 Step 3: Keyboard layout
-  - [ ] 12.1.4 Step 4: Input method (IBus for non-Latin scripts)
-  - [ ] 12.1.5 Step 5: User account creation
-  - [ ] 12.1.6 Step 6: Network setup (optional)
-- [ ] 12.2 All locale data ships on ISO (no internet required)
-
-### 13. Locale Packages
-- [ ] 13.1 Africa group: sw, ha, am, fr (Africa locales)
-- [ ] 13.2 Asia group: id, tl, hi, bn
-- [ ] 13.3 Pacific group: tpi, fj
-- [ ] 13.4 Latin America group: es, pt-BR, qu
-- [ ] 13.5 Base: en-US, en-GB
-- [ ] 13.6 Test each locale: fonts, input method, number/date formatting
-- [ ] 13.7 Community locale contribution process documented
-
----
-
-## v0.7.0 — Installer
-
-### 14. Installer
-- [ ] 14.1 Evaluate: Debian d-i vs Calamares vs custom shell
-  - Decision rationale: Calamares preferred (Qt, LXQt-native, LMIC-friendly)
-- [ ] 14.2 Build Calamares installer configuration
-  - [ ] 14.2.1 Welcome screen (multi-language)
-  - [ ] 14.2.2 Locale/keyboard page
-  - [ ] 14.2.3 Disk layout page (guided + manual)
-  - [ ] 14.2.4 LUKS2 encryption toggle (optional, warned on perf impact)
-  - [ ] 14.2.5 User creation page
-  - [ ] 14.2.6 Summary + install
-  - [ ] 14.2.7 Post-install: A/B partition setup + /data partition
-- [ ] 14.3 Text-mode fallback installer (for headless profile)
-- [ ] 14.4 Live session support (run without installing)
-- [ ] 14.5 Persistence option for live-usb profile
+### 8. IPC Primitives (`elminux-ipc`)
+- [ ] 8.1 Define capability model
+  - [ ] 8.1.1 `Cap` type — unforgeable token (kernel-managed integer)
+  - [ ] 8.1.2 Capability table per process
+  - [ ] 8.1.3 Capability rights flags (read, write, grant, revoke)
+- [ ] 8.2 Define `Msg` type — fixed-size message (register-sized fields)
+- [ ] 8.3 Implement synchronous message passing
+  - [ ] 8.3.1 `sys_send(cap, msg)` — blocks until receiver calls recv
+  - [ ] 8.3.2 `sys_recv(cap) -> Msg` — blocks until sender calls send
+  - [ ] 8.3.3 Rendezvous semantics (no buffering in kernel by default)
+- [ ] 8.4 Implement fast path (zero-copy, no allocation on hot path)
+- [ ] 8.5 Implement channel pairs (bidirectional)
+- [ ] 8.6 Milestone: two processes exchange messages via IPC in QEMU, latency < 500ns
 
 ---
 
-## v0.8.0 — Documentation & Community
+## v0.4.0 — Syscall ABI & User Space Foundation
 
-### 15. Documentation
-- [ ] 15.1 User guide (installation, first use, offline features)
-- [ ] 15.2 Administrator guide (updates, user management, LAN relay setup)
-- [ ] 15.3 Hardware procurement guide (LMIC-sourced, tested components)
-- [ ] 15.4 Contributor guide (build system, locale contribution, packaging)
-- [ ] 15.5 Air-gap update procedure
-- [ ] 15.6 LAN relay (apt-cacher-ng) setup guide
-- [ ] 15.7 SBOM interpretation guide
-- [ ] 15.8 Translate docs to: fr, es, pt-BR, id, sw (priority order)
+### 8. Syscall ABI (`elminux-syscall`)
+- [ ] 8.1 Define ABI version constant (`ABI_VERSION = 1`)
+- [ ] 8.2 Define syscall numbers (stable enum)
+- [ ] 8.3 Implement syscall entry (SYSCALL/SYSRET, x86_64)
+  - [ ] 8.3.1 Set up LSTAR, STAR, SFMASK MSRs
+  - [ ] 8.3.2 Kernel syscall dispatcher
+- [ ] 8.4 Implement initial syscall set
+  - [ ] 8.4.1 `sys_yield()`
+  - [ ] 8.4.2 `sys_exit(code)`
+  - [ ] 8.4.3 `sys_send(cap, msg)`
+  - [ ] 8.4.4 `sys_recv(cap) -> Msg`
+  - [ ] 8.4.5 `sys_alloc_pages(n) -> VAddr`
+  - [ ] 8.4.6 `sys_free_pages(addr, n)`
+  - [ ] 8.4.7 `sys_spawn(manifest) -> Cap`
+  - [ ] 8.4.8 `sys_cap_drop(cap)`
+- [ ] 8.5 User space enters via ELF loader (kernel-side)
+  - [ ] 8.5.1 Minimal ELF64 loader in kernel
+  - [ ] 8.5.2 Set up user stack
+  - [ ] 8.5.3 Jump to user entry point (SYSRET to ring 3)
+- [ ] 8.6 Milestone: first user space process runs, calls sys_exit(0)
 
-### 16. Community Infrastructure
-- [ ] 16.1 Set up project website (elminux.org, static, GitHub Pages)
-- [ ] 16.2 Set up Matrix room (primary community channel)
-- [ ] 16.3 Set up mailing list (for governance/announcements)
-- [ ] 16.4 Set up forum (Discourse or lightweight alternative)
-- [ ] 16.5 Define regional maintainer program
-  - [ ] 16.5.1 Africa maintainer(s)
-  - [ ] 16.5.2 Southeast Asia maintainer(s)
-  - [ ] 16.5.3 Latin America maintainer(s)
-  - [ ] 16.5.4 Pacific maintainer(s)
-
----
-
-## v0.9.0 — Testing & Validation
-
-### 17. Test Suite
-- [ ] 17.1 Boot test matrix (all profiles, all hardware targets)
-- [ ] 17.2 Application smoke tests (all default apps)
-- [ ] 17.3 Locale tests (each language group)
-- [ ] 17.4 Offline functionality tests (zero network, all features)
-- [ ] 17.5 Security regression tests
-  - [ ] 17.5.1 ufw ruleset validation
-  - [ ] 17.5.2 AppArmor enforcement verification
-  - [ ] 17.5.3 No outbound telemetry verification
-- [ ] 17.6 A/B rollback test (deliberate boot failure)
-- [ ] 17.7 Hardware stress test on 512MB RAM profile
-- [ ] 17.8 Install test on minimum disk (8GB HDD)
-
-### 18. SBOM & CVE Workflow
-- [ ] 18.1 Generate SBOM on every release build (CycloneDX format)
-- [ ] 18.2 Publish SBOM with each release artifact
-- [ ] 18.3 Define CVE response SLA
-  - Critical: 7 days
-  - High: 30 days
-  - Medium: 90 days
-- [ ] 18.4 Automate CVE scan on SBOM in CI (grype)
-- [ ] 18.5 Public CVE tracker page on project website
+### 9. Elminux Standard Library (`elminux-std`)
+- [ ] 9.1 Foundation layer
+  - [ ] 9.1.1 Re-export `core` and `alloc` primitives
+  - [ ] 9.1.2 Custom global allocator (calls `sys_alloc_pages`)
+  - [ ] 9.1.3 Panic handler (calls `sys_exit(1)` + print)
+- [ ] 9.2 I/O traits
+  - [ ] 9.2.1 `Read` trait
+  - [ ] 9.2.2 `Write` trait
+  - [ ] 9.2.3 `BufRead` trait
+- [ ] 9.3 IPC bindings
+  - [ ] 9.3.1 Safe wrappers around `sys_send` / `sys_recv`
+  - [ ] 9.3.2 Typed channel API
+- [ ] 9.4 Threading primitives
+  - [ ] 9.4.1 `Thread::spawn()` → `sys_spawn()`
+  - [ ] 9.4.2 `Mutex<T>` (IPC-based, no spinlock in user space)
+- [ ] 9.5 String types (`ElString`, UTF-8, no C string)
+- [ ] 9.6 Collections (re-export `alloc` collections)
+- [ ] 9.7 Milestone: user space program uses `elminux-std`, prints via IPC
 
 ---
 
-## v1.0.0 — Stable Release
+## v0.5.0 — Drivers & Device Layer
+
+### 10. Driver Framework (`elminux-drivers`)
+- [ ] 10.1 Define `Driver` trait
+  - [ ] 10.1.1 `init() -> Result<Cap>`
+  - [ ] 10.1.2 `handle_msg(msg: Msg) -> Msg`
+- [ ] 10.2 Driver registry (kernel-side)
+- [ ] 10.3 Implement serial driver (user space server)
+  - [ ] 10.3.1 UART 16550 via port I/O capability
+  - [ ] 10.3.2 IPC interface: `write(bytes)`, `read() -> bytes`
+- [ ] 10.4 Implement keyboard driver (user space server)
+  - [ ] 10.4.1 PS/2 keyboard via IRQ1
+  - [ ] 10.4.2 Scancode → keycode translation
+  - [ ] 10.4.3 IPC interface: `read_key() -> KeyEvent`
+- [ ] 10.5 Implement framebuffer driver
+  - [ ] 10.5.1 Limine framebuffer protocol
+  - [ ] 10.5.2 Pixel write, rect fill, blit
+  - [ ] 10.5.3 Basic text rendering (bitmap font)
+- [ ] 10.6 Implement VirtIO block driver (QEMU virtual disk)
+  - [ ] 10.6.1 VirtIO MMIO transport
+  - [ ] 10.6.2 Read/write sectors
+  - [ ] 10.6.3 IPC interface: `read_block(lba)`, `write_block(lba, data)`
+- [ ] 10.7 Milestone: keyboard input displayed on framebuffer in QEMU
+
+---
+
+## v0.6.0 — Filesystem
+
+### 11. Filesystem Server
+- [ ] 11.1 Define filesystem IPC protocol
+  - [ ] 11.1.1 `open(path, flags) -> Cap`
+  - [ ] 11.1.2 `read(cap, buf, len) -> usize`
+  - [ ] 11.1.3 `write(cap, buf, len) -> usize`
+  - [ ] 11.1.4 `close(cap)`
+  - [ ] 11.1.5 `stat(path) -> Stat`
+  - [ ] 11.1.6 `readdir(path) -> [DirEntry]`
+- [ ] 11.2 Implement in-memory filesystem (initramfs)
+  - [ ] 11.2.1 Embedded in kernel image at build time
+  - [ ] 11.2.2 Read-only initially
+  - [ ] 11.2.3 Stores: `elinit`, `elsh`, initial `epkg` store
+- [ ] 11.3 Implement on-disk filesystem (custom, simple)
+  - [ ] 11.3.1 Define Elminux FS format (extent-based, append-friendly)
+  - [ ] 11.3.2 Read support
+  - [ ] 11.3.3 Write support
+  - [ ] 11.3.4 `fsck` equivalent tool
+- [ ] 11.4 VFS layer (routes FS calls to correct server)
+- [ ] 11.5 Milestone: read/write files on VirtIO disk in QEMU
+
+---
+
+## v0.7.0 — Init System & Shell
+
+### 12. Init System (`elinit`)
+- [ ] 12.1 PID 1 equivalent — first user process spawned by kernel
+- [ ] 12.2 Read capability manifest at boot
+- [ ] 12.3 Spawn driver servers in order
+  - [ ] 12.3.1 serial → keyboard → framebuffer → block → fs
+- [ ] 12.4 Service supervision
+  - [ ] 12.4.1 Monitor driver server caps
+  - [ ] 12.4.2 Restart crashed services (with backoff)
+- [ ] 12.5 Spawn `elsh` after all drivers ready
+- [ ] 12.6 Milestone: full boot sequence to shell prompt in QEMU
+
+### 13. Shell (`elsh`)
+- [ ] 13.1 Read line from keyboard driver (via IPC)
+- [ ] 13.2 Parse command + arguments
+- [ ] 13.3 Execute commands via `sys_spawn`
+- [ ] 13.4 Built-in commands
+  - [ ] 13.4.1 `help`
+  - [ ] 13.4.2 `ls`
+  - [ ] 13.4.3 `cat`
+  - [ ] 13.4.4 `echo`
+  - [ ] 13.4.5 `exit`
+- [ ] 13.5 Structured I/O pipeline (typed, not stringly-typed)
+- [ ] 13.6 Milestone: interactive shell usable in QEMU
+
+---
+
+## v0.8.0 — Package Manager (`epkg`)
+
+### 14. Package Format
+- [ ] 14.1 Define `.epkg` format (tar.zst + `epkg.toml` manifest)
+- [ ] 14.2 Define `epkg.toml` schema
+  - [ ] 14.2.1 `[package]` — name, version, abi_version, license
+  - [ ] 14.2.2 `[capabilities]` — required, optional
+  - [ ] 14.2.3 `[dependencies]` — name + hash-pinned version
+- [ ] 14.3 Define package signing (Ed25519)
+  - [ ] 14.3.1 Key generation tool
+  - [ ] 14.3.2 Sign command
+  - [ ] 14.3.3 Verify on install
+
+### 15. Package Store
+- [ ] 15.1 Define store layout (`/pkg/store`, `/pkg/active`, `/pkg/keys`)
+- [ ] 15.2 Implement hash-addressed store (blake3)
+- [ ] 15.3 Implement atomic install (stage → verify → link)
+- [ ] 15.4 Implement rollback (relink previous version)
+
+### 16. epkg CLI
+- [ ] 16.1 `epkg install <package>`
+- [ ] 16.2 `epkg remove <package>`
+- [ ] 16.3 `epkg list`
+- [ ] 16.4 `epkg verify` — verify all installed package signatures
+- [ ] 16.5 `epkg build` — build `.epkg` from source manifest
+- [ ] 16.6 Offline-first: all operations work without network
+- [ ] 16.7 Milestone: install/remove a package in QEMU
+
+---
+
+## v0.9.0 — Security Hardening & Testing
+
+### 17. Security
+- [ ] 17.1 Audit all `unsafe` blocks in `elminux-hal` — document each
+- [ ] 17.2 Add `#![forbid(unsafe_code)]` to all non-hal crates
+- [ ] 17.3 Implement capability audit log (append-only, kernel-side)
+- [ ] 17.4 Add KASLR (kernel address space layout randomization)
+- [ ] 17.5 Stack canaries in kernel (via compiler flag)
+- [ ] 17.6 Implement `cargo-deny` policy (no GPL-incompatible deps)
+- [ ] 17.7 SBOM generation on every release (cargo-cyclonedx)
+
+### 18. Testing
+- [ ] 18.1 Kernel unit tests (QEMU headless, `x86_64-unknown-none`)
+  - [ ] 18.1.1 Memory allocator tests
+  - [ ] 18.1.2 Page table tests
+  - [ ] 18.1.3 IPC message passing tests
+  - [ ] 18.1.4 Scheduler round-robin tests
+- [ ] 18.2 Integration tests (full boot in QEMU, scripted)
+  - [ ] 18.2.1 Boot to shell prompt
+  - [ ] 18.2.2 File read/write
+  - [ ] 18.2.3 Package install/remove
+  - [ ] 18.2.4 Driver crash + restart
+- [ ] 18.3 Fuzzing
+  - [ ] 18.3.1 Syscall fuzzer (cargo-fuzz)
+  - [ ] 18.3.2 IPC message fuzzer
+  - [ ] 18.3.3 epkg manifest parser fuzzer
+
+---
+
+## v1.0.0 — Stable Experimental Release
 
 ### 19. Pre-release
-- [ ] 19.1 Beta release to regional maintainers
-- [ ] 19.2 Field test: minimum 3 LMIC deployments (different regions)
-- [ ] 19.3 Integrate field feedback
-- [ ] 19.4 External security review (academic or NGO partner)
-- [ ] 19.5 Freeze installer + config interface (stability contract)
-- [ ] 19.6 Finalize all documentation + translations
+- [ ] 19.1 All kernel unit tests passing in CI
+- [ ] 19.2 Full boot sequence stable in QEMU (100 consecutive boots, no panic)
+- [ ] 19.3 Syscall ABI frozen at v1 (no breaking changes after this)
+- [ ] 19.4 SBOM published
+- [ ] 19.5 All `unsafe` blocks documented with safety invariants
+- [ ] 19.6 External review of kernel memory safety (academic partner)
 
 ### 20. Release
 - [ ] 20.1 Tag v1.0.0
-- [ ] 20.2 Publish signed ISO artifacts (all profiles)
+- [ ] 20.2 Publish signed ISO (QEMU-tested)
 - [ ] 20.3 Publish SBOM
-- [ ] 20.4 Announce (DistroWatch submission, OSS forums, NGO networks, elminux.org)
-- [ ] 20.5 Define LTS support window (minimum 3 years security patches)
-- [ ] 20.6 Align LTS window with Debian Bookworm LTS (until ~2028)
+- [ ] 20.4 Publish ABI v1 specification document
+- [ ] 20.5 Announce (OSDev community, Rust forums, elminux.org)
 
 ---
 
 ## Post v1.0.0 Backlog
 
-### Profiles
-- [ ] B.1 Education profile (GCompris, Scratch, offline Khan Academy)
-- [ ] B.2 Medical profile (GNU Health, Orthanc)
-- [ ] B.3 Agricultural profile (offline soil, crop, weather tools)
-- [ ] B.4 Sovereignty profile (airgap-capable, SBOM-verifiable, audit-ready — targets gov/institutional deployment)
+### Hardware Expansion
+- [ ] B.1 Bare metal x86_64 boot (real hardware, start with one tested board)
+- [ ] B.2 NVMe driver
+- [ ] B.3 USB (xHCI) driver
+- [ ] B.4 AHCI (SATA) driver
+- [ ] B.5 Intel/AMD NIC driver (e1000 / virtio-net first)
+- [ ] B.6 aarch64 port (Raspberry Pi 4)
 
-### Hardware & Connectivity
-- [ ] B.5 Solar/low-power optimization (suspend tuning, display power)
-- [ ] B.6 Mesh networking profile
-  - [ ] B.6.1 LoRa / Meshtastic first-class support
-  - [ ] B.6.2 WiFi mesh (batman-adv or similar)
-  - [ ] B.6.3 Connectivity-independent LAN-over-mesh
-  - [ ] B.6.4 Use cases: disaster response, maritime, rural, conflict zones
+### System
+- [ ] B.7 SMP (multi-core scheduler)
+- [ ] B.8 Network stack (TCP/IP in Rust, user space server)
+- [ ] B.9 TLS (rustls-based)
+- [ ] B.10 Display server (Wayland-inspired, no X11)
 
-### Local AI Layer
-- [ ] B.7 Ship curated local model runner (llama.cpp-based)
-  - [ ] B.7.1 Target: functional on 2GB RAM
-  - [ ] B.7.2 Use cases: offline assistant, translation, document summarizer
-  - [ ] B.7.3 No cloud dependency, no telemetry, verifiable weights
-  - [ ] B.7.4 Model selection policy (size, license, language coverage)
+### Userland
+- [ ] B.11 epkg repository server
+- [ ] B.12 Port Rust std applications to elminux-std
+- [ ] B.13 Text editor (port helix or build minimal)
+- [ ] B.14 Local AI layer (llama.cpp-equivalent in Rust, 2GB RAM target)
 
-### Governance & Ecosystem
-- [ ] B.8 Foundation/legal entity formation for long-term governance
-- [ ] B.9 Official Debian derivative registration (Debian derivatives census)
-- [ ] B.10 Partnership with NGOs for hardware distribution programs
-- [ ] B.11 Sovereignty certification pathway (target: ANSSI-compatible, EU digital sovereignty frameworks)
+### Mission Profiles
+- [ ] B.15 Education profile
+- [ ] B.16 Medical profile
+- [ ] B.17 Agricultural profile
+- [ ] B.18 Sovereignty profile (airgap, audit-ready)
+
+### Governance
+- [ ] B.19 Foundation/legal entity
+- [ ] B.20 Sovereignty certification pathway (ANSSI-compatible)
+- [ ] B.21 NGO hardware distribution partnerships
