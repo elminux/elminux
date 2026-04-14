@@ -126,10 +126,14 @@ explicitly — but this is an opt-in exception, not the default.
 - Service supervision (restart on crash)
 - Structured in Rust, capability-aware
 
-**`elsh`** — Shell
-- Minimal interactive shell
-- Structured I/O (not stringly-typed pipelines)
-- First user-facing component
+**`modsh`** — Shell
+- Replaced by **modsh** (`github.com/modsh-shell/modsh`)
+- Uses `modsh-core` + `modsh-interactive` crates (Apache-2.0, GPL-3.0 compatible)
+- `modsh-ai` (BSL 1.1) excluded from OS bundle — available as optional `epkg` package
+- POSIX-compatible core + structured data pipelines (nushell-inspired, opt-in)
+- **Porting requirement:** modsh currently targets Rust `std` (POSIX/Linux syscalls)
+  Must be ported to `elminux-std` once `elminux-syscall` ABI is stable (v0.4.0+)
+- Until ported: modsh runs on host for development; bundled in OS at v0.7.0
 
 **`epkg`** — Package Manager
 - See Package Manager section below
@@ -161,7 +165,7 @@ Spawn elinit (first user process)
     ├── Spawn filesystem server
     │
     ▼
-elsh (interactive shell)
+modsh (interactive shell, modsh-core + modsh-interactive)
     │
     ▼
 [System ready]
@@ -218,7 +222,7 @@ sys_cap_drop(cap: Cap)               — release capability
 **Manifest (`epkg.toml`):**
 ```toml
 [package]
-name = "elsh"
+name = "modsh"
 version = "0.1.0"
 abi_version = 1
 author = "Elminux Project"
@@ -262,7 +266,7 @@ Every architectural decision is evaluated against the performance targets below.
 |---|---|---|
 | IPC round-trip latency | < 500ns | kernel↔driver single message |
 | Syscall overhead | < 200ns | `sys_yield()` round-trip |
-| Boot to shell (QEMU) | < 2s | power-on to `elsh` prompt |
+| Boot to shell (QEMU) | < 2s | power-on to `modsh` prompt |
 | Idle memory footprint | < 16MB | post-boot, no user apps |
 | Kernel binary size | < 1MB | stripped ELF |
 
