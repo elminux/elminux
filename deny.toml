@@ -1,0 +1,75 @@
+# 3.4 cargo-deny configuration
+# License and advisory checking for CI/CD
+
+[graph]
+targets = [
+    { triple = "x86_64-unknown-none" },
+]
+all-features = false
+no-default-features = false
+
+[output]
+feature-depth = 1
+
+[licenses]
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-DFS-2016",
+    "Unicode-3.0",
+]
+deny = [
+    "GPL-1.0",
+    "GPL-2.0",
+    "GPL-3.0",
+]
+copyleft = "deny"
+allow-osi-fsf-free = "either"
+default = "deny"
+unused-allowed-license = "allow"
+confidence-threshold = 0.8
+exceptions = [
+    # Our own crates are GPL-3.0 which is fine for the project itself
+    { allow = ["GPL-3.0"], name = "elminux-kernel" },
+    { allow = ["GPL-3.0"], name = "elminux-hal" },
+    { allow = ["GPL-3.0"], name = "elminux-mm" },
+    { allow = ["GPL-3.0"], name = "elminux-sched" },
+    { allow = ["GPL-3.0"], name = "elminux-ipc" },
+    { allow = ["GPL-3.0"], name = "elminux-drivers" },
+    { allow = ["GPL-3.0"], name = "elminux-syscall" },
+    { allow = ["GPL-3.0"], name = "elminux-std" },
+    { allow = ["GPL-3.0"], name = "epkg" },
+    { allow = ["GPL-3.0"], name = "elinit" },
+    { allow = ["GPL-3.0"], name = "modsh" },
+    { allow = ["GPL-3.0"], name = "build-tools" },
+]
+
+[[licenses.clarify]]
+name = "ring"
+expression = "MIT AND ISC AND OpenSSL"
+license-files = [
+    { path = "LICENSE", hash = 0xbd0eed23 },
+]
+
+[advisories]
+version = 2
+yanked = "warn"
+ignore = []
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []
+
+[sources.allow-org]
+github = ["elminux", "modsh-shell"]
+
+[bans]
+multiple-versions = "warn"
+wildcards = "allow"
+highlight = "all"

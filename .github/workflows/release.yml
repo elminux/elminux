@@ -1,0 +1,90 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # 3.6 Release pipeline: tag → build ISO → GPG sign → publish
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rust-src, llvm-tools-preview
+          targets: x86_64-unknown-none
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-system-x86 xorriso lld llvm
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build release kernel
+        run: cargo build --release --package elminux-kernel
+
+      - name: Build ISO
+        run: make iso
+
+      - name: Generate SBOM (cargo-cyclonedx)
+        run: |
+          cargo install cargo-cyclonedx
+          cargo cyclonedx --format json --output dist/
+
+      - name: Create checksums
+        run: |
+          cd build
+          sha256sum elminux.iso > elminux.iso.sha256
+
+      - name: GPG sign artifacts (if key available)
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          if [ -n "$GPG_PRIVATE_KEY" ]; then
+            echo "$GPG_PRIVATE_KEY" | gpg --batch --yes --import
+            cd build
+            gpg --batch --yes --passphrase "$GPG_PASSPHRASE" \
+                --pinentry-mode loopback \
+                --detach-sign --armor elminux.iso
+            echo "Artifacts signed"
+          else
+            echo "No GPG key configured, skipping signature"
+          fi
+
+      - name: Upload release artifacts
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            build/elminux.iso
+            build/elminux.iso.sha256
+            build/elminux.iso.asc
+            dist/*.json
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload SBOM to release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/*.json
+          append_body: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -62,12 +62,12 @@ Status tags: [ ] todo | [x] done | [~] in-progress | [!] blocked
 - [x] 2.10 Verify workspace builds cleanly (no code yet — structure only)
 
 ### 3. CI/CD Pipeline
-- [ ] 3.1 GitHub Actions: build + clippy on every PR
-- [ ] 3.2 GitHub Actions: QEMU boot smoke test (headless)
-- [ ] 3.3 GitHub Actions: doc build verification
-- [ ] 3.4 GitHub Actions: `deny.toml` — license + advisory check (cargo-deny)
-- [ ] 3.5 GitHub Actions: SBOM generation (cargo-cyclonedx)
-- [ ] 3.6 Release pipeline: tag → build ISO → GPG sign → publish
+- [x] 3.1 GitHub Actions: build + clippy on every PR
+- [x] 3.2 GitHub Actions: QEMU boot smoke test (headless)
+- [x] 3.3 GitHub Actions: doc build verification
+- [x] 3.4 GitHub Actions: `deny.toml` — license + advisory check (cargo-deny)
+- [x] 3.5 GitHub Actions: SBOM generation (cargo-cyclonedx)
+- [x] 3.6 Release pipeline: tag → build ISO → GPG sign → publish
 
 ---
 
