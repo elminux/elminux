@@ -1,8 +1,10 @@
 # Elminux
 
+> **Local-first. Built to last.**
+>
 > A community-owned, general-purpose Linux distribution built for
-> Low- and Middle-Income Country (LMIC) realities: constrained hardware,
-> unreliable connectivity, diverse locales, and community maintainability.
+> constrained hardware, unreliable connectivity, diverse locales,
+> and anyone who needs computing that works without cloud dependency.
 
 ---
 
@@ -10,11 +12,14 @@
 
 Mainstream Linux distributions are designed for hardware and connectivity
 conditions that do not reflect the majority of the world's computer users.
-LMIC users face: recycled/aging hardware, intermittent or zero internet,
-limited technical support, and underrepresented languages. No community-owned,
-general-purpose distribution is built specifically for these constraints.
+LMIC users face recycled hardware, intermittent connectivity, limited support,
+and underrepresented languages. But the same needs are growing globally —
+digital sovereignty movements, privacy concerns, e-waste reduction, and
+distrust of cloud dependency are making local-first computing relevant
+everywhere.
 
-Elminux fills that gap.
+Elminux fills that gap — built for the 80% of the world that cloud computing
+forgot, and the 20% starting to remember why that matters.
 
 ---
 
@@ -79,3 +84,4 @@ Bundled software retains their respective upstream licenses (Debian policy compl
 - Forum: TBD
 - Matrix/IRC: TBD
 - Mailing list: TBD
+- 
