@@ -104,7 +104,7 @@ Status tags: [ ] todo | [x] done | [~] in-progress | [!] blocked
 ### 7. Desktop Environment
 - [ ] 7.1 Install LXQt (latest stable in Bookworm)
 - [ ] 7.2 Configure SDDM (minimal theme, low resource)
-- [ ] 7.3 Create LMIC Linux default theme
+- [ ] 7.3 Create Elminux default theme
   - [ ] 7.3.1 Wallpaper (community-contributed, license-clear)
   - [ ] 7.3.2 Icon theme (lightweight)
   - [ ] 7.3.3 GTK/Qt theme (coherent, low-resource)
@@ -151,7 +151,7 @@ Status tags: [ ] todo | [x] done | [~] in-progress | [!] blocked
 
 ### 11. Update Security
 - [ ] 11.1 Verify apt uses Debian signed repos by default
-- [ ] 11.2 Implement GPG verification for any LMIC Linux overlay packages
+- [ ] 11.2 Implement GPG verification for any Elminux overlay packages
 - [ ] 11.3 Implement A/B rollback on failed boot
 - [ ] 11.4 Document air-gap update procedure (USB apt offline)
 - [ ] 11.5 Configure apt-cacher-ng for LAN relay deployment
@@ -274,12 +274,29 @@ Status tags: [ ] todo | [x] done | [~] in-progress | [!] blocked
 
 ## Post v1.0.0 Backlog
 
+### Profiles
 - [ ] B.1 Education profile (GCompris, Scratch, offline Khan Academy)
-- [ ] B.2 Medical profile (GNU Health, Orthanc — pulls from MedLIMC work)
-- [ ] B.3 Farmer/agricultural profile (offline soil, crop, weather tools)
-- [ ] B.4 Solar/low-power hardware optimization (suspend tuning, display power)
-- [ ] B.5 LoRa/mesh network support (connectivity beyond WiFi/cellular)
-- [ ] B.6 Foundation/legal entity formation for long-term governance
-- [ ] B.7 Official Debian derivative registration (Debian derivatives census)
-- [ ] B.8 Partnership with NGOs for hardware distribution programs
-- [ ] 
+- [ ] B.2 Medical profile (GNU Health, Orthanc)
+- [ ] B.3 Agricultural profile (offline soil, crop, weather tools)
+- [ ] B.4 Sovereignty profile (airgap-capable, SBOM-verifiable, audit-ready — targets gov/institutional deployment)
+
+### Hardware & Connectivity
+- [ ] B.5 Solar/low-power optimization (suspend tuning, display power)
+- [ ] B.6 Mesh networking profile
+  - [ ] B.6.1 LoRa / Meshtastic first-class support
+  - [ ] B.6.2 WiFi mesh (batman-adv or similar)
+  - [ ] B.6.3 Connectivity-independent LAN-over-mesh
+  - [ ] B.6.4 Use cases: disaster response, maritime, rural, conflict zones
+
+### Local AI Layer
+- [ ] B.7 Ship curated local model runner (llama.cpp-based)
+  - [ ] B.7.1 Target: functional on 2GB RAM
+  - [ ] B.7.2 Use cases: offline assistant, translation, document summarizer
+  - [ ] B.7.3 No cloud dependency, no telemetry, verifiable weights
+  - [ ] B.7.4 Model selection policy (size, license, language coverage)
+
+### Governance & Ecosystem
+- [ ] B.8 Foundation/legal entity formation for long-term governance
+- [ ] B.9 Official Debian derivative registration (Debian derivatives census)
+- [ ] B.10 Partnership with NGOs for hardware distribution programs
+- [ ] B.11 Sovereignty certification pathway (target: ANSSI-compatible, EU digital sovereignty frameworks)
