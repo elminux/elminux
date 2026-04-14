@@ -4,6 +4,7 @@ Standard: OSS SDLC / DevSecOps
 Versioning: SemVer 2.0.0
 Language: Rust (nightly, x86_64-unknown-none)
 Kernel model: Hybrid (trusted core in kernel space, drivers in user space)
+Current release: v0.1.0 (2026-04-14)
 Status tags: [ ] todo | [x] done | [~] in-progress | [!] blocked
 
 ---
