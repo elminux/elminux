@@ -56,7 +56,7 @@ Status tags: [ ] todo | [x] done | [~] in-progress | [!] blocked
   - [ ] 2.9.8 `userland/elminux-std`
   - [ ] 2.9.9 `userland/epkg`
   - [ ] 2.9.10 `userland/elinit`
-  - [ ] 2.9.11 `userland/elsh`
+  - [ ] 2.9.11 `userland/modsh` (submodule: github.com/modsh-shell/modsh)
   - [ ] 2.9.12 `tools/build-tools`
 - [ ] 2.10 Verify workspace builds cleanly (no code yet — structure only)
 
@@ -253,7 +253,7 @@ Status tags: [ ] todo | [x] done | [~] in-progress | [!] blocked
 - [ ] 11.2 Implement in-memory filesystem (initramfs)
   - [ ] 11.2.1 Embedded in kernel image at build time
   - [ ] 11.2.2 Read-only initially
-  - [ ] 11.2.3 Stores: `elinit`, `elsh`, initial `epkg` store
+  - [ ] 11.2.3 Stores: `elinit`, `modsh`, initial `epkg` store
 - [ ] 11.3 Implement on-disk filesystem (custom, simple)
   - [ ] 11.3.1 Define Elminux FS format (extent-based, append-friendly)
   - [ ] 11.3.2 Read support
@@ -274,21 +274,30 @@ Status tags: [ ] todo | [x] done | [~] in-progress | [!] blocked
 - [ ] 12.4 Service supervision
   - [ ] 12.4.1 Monitor driver server caps
   - [ ] 12.4.2 Restart crashed services (with backoff)
-- [ ] 12.5 Spawn `elsh` after all drivers ready
+- [ ] 12.5 Spawn `modsh` after all drivers ready
 - [ ] 12.6 Milestone: full boot sequence to shell prompt in QEMU
 
-### 13. Shell (`elsh`)
-- [ ] 13.1 Read line from keyboard driver (via IPC)
-- [ ] 13.2 Parse command + arguments
-- [ ] 13.3 Execute commands via `sys_spawn`
-- [ ] 13.4 Built-in commands
-  - [ ] 13.4.1 `help`
-  - [ ] 13.4.2 `ls`
-  - [ ] 13.4.3 `cat`
-  - [ ] 13.4.4 `echo`
-  - [ ] 13.4.5 `exit`
-- [ ] 13.5 Structured I/O pipeline (typed, not stringly-typed)
-- [ ] 13.6 Milestone: interactive shell usable in QEMU
+### 13. Shell — modsh Integration
+- [ ] 13.1 Add modsh as git submodule (`userland/modsh`)
+  - [ ] 13.1.1 Pin to stable modsh release tag
+  - [ ] 13.1.2 Verify Apache-2.0 license compliance (modsh-core + modsh-interactive only)
+  - [ ] 13.1.3 Exclude modsh-ai from OS bundle (BSL 1.1 — GPL incompatible)
+- [ ] 13.2 Port modsh-core to `elminux-std`
+  - [ ] 13.2.1 Audit all `std` dependencies in modsh-core
+  - [ ] 13.2.2 Replace `std::fs` calls → elminux filesystem IPC
+  - [ ] 13.2.3 Replace `std::process` → `sys_spawn` capability
+  - [ ] 13.2.4 Replace `std::io` → `elminux-std` I/O traits
+  - [ ] 13.2.5 Replace `std::env` → elminux environment capability
+- [ ] 13.3 Port modsh-interactive to `elminux-std`
+  - [ ] 13.3.1 Replace terminal I/O → keyboard + framebuffer driver IPC
+  - [ ] 13.3.2 Verify line editing, history, completion on elminux
+- [ ] 13.4 Verify modsh built-ins work on elminux
+  - [ ] 13.4.1 `ls`, `cat`, `echo`, `cd`, `exit`
+  - [ ] 13.4.2 Structured pipeline output via elminux IPC
+- [ ] 13.5 Milestone: modsh interactive prompt usable in QEMU on elminux
+- [ ] 13.6 modsh-ai (optional epkg package — post v1.0.0)
+  - [ ] 13.6.1 Package as `modsh-ai.epkg` (BSL 1.1, separate install)
+  - [ ] 13.6.2 Document license difference clearly in epkg manifest
 
 ---
 
