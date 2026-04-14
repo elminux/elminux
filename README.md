@@ -54,7 +54,7 @@ This is not a Linux distribution. This is not a fork of anything.
 | Syscall ABI | Custom capability-based ABI, defined in `elminux-syscall` |
 | Package manager | `epkg` — Rust-native, TOML manifests, cryptographically signed |
 | Init system | `elinit` — Rust, capability-aware |
-| Shell | `elsh` — Rust, structured I/O |
+| Shell | `modsh` — Rust, POSIX-compatible + structured I/O pipelines (Apache-2.0 core) |
 | Boot | Limine bootloader → Elminux kernel entry |
 | Primary target | x86_64 (QEMU first, then bare metal) |
 
@@ -77,7 +77,7 @@ elminux/
 │   ├── elminux-std/        # Rust-native standard library (no libc)
 │   ├── epkg/               # Package manager
 │   ├── elinit/             # Init system
-│   └── elsh/               # Shell
+│   └── modsh/              # Shell (modsh-core + modsh-interactive, Apache-2.0)
 └── tools/
     └── build-tools/        # ISO builder, QEMU runner, debug tooling
 ```
