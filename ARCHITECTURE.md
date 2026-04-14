@@ -111,7 +111,7 @@ WAN mode: internet available
                  │ (when WAN available)
                  ▼
 ┌─────────────────────────────────┐
-│   LMIC Linux Update Server      │
+│   Elminux Update Server        │
 │   (curated, tested, signed)     │
 └────────────────┬────────────────┘
                  │
