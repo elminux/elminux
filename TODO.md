@@ -85,7 +85,7 @@ Status tags: [ ] todo | [x] done | [~] in-progress | [!] blocked
   - [x] 4.3.3 IRQ stubs (32+) — placeholder handlers
 - [x] 4.4 Implement basic serial output (UART 16550)
   - [x] 4.4.1 `write_byte`, `write_str` to COM1 at 115200 baud
-  - [~] 4.4.2 Kernel `print!` / `println!` macros via serial — TODO
+  - [x] 4.4.2 Kernel `print!` / `println!` macros via serial
 - [ ] 4.5 Implement APIC (Advanced Programmable Interrupt Controller)
   - [ ] 4.5.1 Disable legacy PIC (8259)
   - [ ] 4.5.2 Initialize local APIC

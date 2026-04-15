@@ -11,6 +11,8 @@ use elminux_hal::gdt;
 use elminux_hal::idt;
 use elminux_hal::uart;
 
+mod print;
+
 /// Kernel entry point - called by Limine bootloader
 ///
 /// # Safety
@@ -32,17 +34,17 @@ pub extern "C" fn _start() -> ! {
     }
 
     // Print boot banner
-    uart::puts_str("\n");
-    uart::puts_str("========================================\n");
-    uart::puts_str("  Elminux Kernel v0.2.0\n");
-    uart::puts_str("  Hybrid microkernel for x86_64\n");
-    uart::puts_str("========================================\n");
-    uart::puts_str("\n");
-    uart::puts_str("[BOOT] GDT initialized\n");
-    uart::puts_str("[BOOT] IDT initialized\n");
-    uart::puts_str("[BOOT] UART initialized\n");
-    uart::puts_str("[BOOT] Kernel boot sequence complete\n");
-    uart::puts_str("\n");
+    println!();
+    println!("========================================");
+    println!("  Elminux Kernel v0.2.0");
+    println!("  Hybrid microkernel for x86_64");
+    println!("========================================");
+    println!();
+    println!("[BOOT] GDT initialized");
+    println!("[BOOT] IDT initialized");
+    println!("[BOOT] UART initialized");
+    println!("[BOOT] Kernel boot sequence complete");
+    println!();
 
     // TODO: Initialize memory manager
     // TODO: Initialize scheduler
@@ -58,9 +60,9 @@ pub extern "C" fn _start() -> ! {
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     // Try to print panic info if UART is available
-    uart::puts_str("\n[!!!] KERNEL PANIC\n");
+    println!("\n[!!!] KERNEL PANIC");
     // TODO: Format and print panic message with _info
-    uart::puts_str("[!!!] Panic occurred\n");
+    println!("[!!!] Panic occurred");
 
     // Halt forever
     loop {
