@@ -82,34 +82,4 @@ pub fn write_str(s: &str) {
     }
 }
 
-/// Write a null-terminated C string to serial
-///
-/// # Safety
-/// `s` must point to valid null-terminated UTF-8 data.
-/// This is unsafe because it dereferences a raw pointer.
-pub unsafe fn puts(s: *const u8) {
-    let mut ptr = s;
-    while unsafe { *ptr } != 0 {
-        let byte = unsafe { *ptr };
-        if byte == b'\n' {
-            write_byte(b'\r');
-        }
-        write_byte(byte);
-        ptr = ptr.add(1);
-    }
-}
-
-/// Write a Rust string slice to serial
-///
-/// This is a safe wrapper around the unsafe `puts`.
-pub fn puts_str(s: &str) {
-    write_str(s);
-}
-
-/// Write a Rust string literal to serial (convenience macro will use this)
-///
-/// Takes a string literal and writes it directly.
-pub fn puts_lit(s: &'static str) {
-    write_str(s);
-}
 
