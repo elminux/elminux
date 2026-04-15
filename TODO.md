@@ -74,18 +74,18 @@ Status tags: [ ] todo | [x] done | [~] in-progress | [!] blocked
 ## v0.2.0 — Kernel Boot (QEMU)
 
 ### 4. Hardware Abstraction Layer (`elminux-hal`)
-- [ ] 4.1 Implement kernel entry point (`_start`) — Limine protocol
-- [ ] 4.2 Implement GDT (Global Descriptor Table)
-  - [ ] 4.2.1 Kernel code + data segments
-  - [ ] 4.2.2 User code + data segments
-  - [ ] 4.2.3 TSS (Task State Segment)
-- [ ] 4.3 Implement IDT (Interrupt Descriptor Table)
-  - [ ] 4.3.1 CPU exception handlers (0–31)
-  - [ ] 4.3.2 Panic handler for unhandled exceptions
-  - [ ] 4.3.3 IRQ stubs (32+)
-- [ ] 4.4 Implement basic serial output (UART 16550)
-  - [ ] 4.4.1 `write_byte`, `write_str` to COM1
-  - [ ] 4.4.2 Kernel `print!` / `println!` macros via serial
+- [x] 4.1 Implement kernel entry point (`_start`) — Limine protocol
+- [x] 4.2 Implement GDT (Global Descriptor Table)
+  - [x] 4.2.1 Kernel code + data segments (0x08, 0x10)
+  - [x] 4.2.2 User code + data segments (0x18, 0x20)
+  - [x] 4.2.3 TSS (Task State Segment at 0x28)
+- [x] 4.3 Implement IDT (Interrupt Descriptor Table)
+  - [x] 4.3.1 CPU exception handlers (0–31) — generic handler stubs
+  - [x] 4.3.2 Panic handler for unhandled exceptions — via #[panic_handler]
+  - [x] 4.3.3 IRQ stubs (32+) — placeholder handlers
+- [x] 4.4 Implement basic serial output (UART 16550)
+  - [x] 4.4.1 `write_byte`, `write_str` to COM1 at 115200 baud
+  - [~] 4.4.2 Kernel `print!` / `println!` macros via serial — TODO
 - [ ] 4.5 Implement APIC (Advanced Programmable Interrupt Controller)
   - [ ] 4.5.1 Disable legacy PIC (8259)
   - [ ] 4.5.2 Initialize local APIC

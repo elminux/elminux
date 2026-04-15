@@ -1,22 +1,115 @@
 //! UART 16550 Serial Port Driver
 //!
-//! Basic serial output for early kernel debugging.
+//! Basic serial output for early kernel debugging on COM1.
+
+use crate::port::{outb, inb};
 
 /// COM1 base port
 pub const COM1: u16 = 0x3F8;
 
-/// Initialize UART 16550
+/// UART register offsets
+const REG_DATA: u16 = 0;       // Data register (read/write)
+const REG_IER: u16 = 1;        // Interrupt Enable Register
+#[allow(dead_code)]
+const REG_IIR: u16 = 2;        // Interrupt Identification Register
+const REG_FCR: u16 = 2;        // FIFO Control Register
+const REG_LCR: u16 = 3;        // Line Control Register
+const REG_MCR: u16 = 4;        // Modem Control Register
+const REG_LSR: u16 = 5;        // Line Status Register
+#[allow(dead_code)]
+const REG_MSR: u16 = 6;        // Modem Status Register
+#[allow(dead_code)]
+const REG_SCR: u16 = 7;        // Scratch Register
+
+/// Line Status Register bits
+const LSR_THRE: u8 = 0x20;     // Transmitter Holding Register Empty
+#[allow(dead_code)]
+const LSR_TEMT: u8 = 0x40;     // Transmitter Empty
+
+/// Initialize UART 16550 on COM1
+///
+/// Configures 115200 baud, 8 data bits, no parity, 1 stop bit (8N1),
+/// with FIFO enabled.
 pub fn init() {
-    // TODO: Configure baud rate, 8N1
-    // TODO: Enable FIFO
+    // Disable interrupts
+    unsafe { outb(COM1 + REG_IER, 0x00); }
+
+    // Enable DLAB (Divisor Latch Access Bit) to set baud rate
+    unsafe { outb(COM1 + REG_LCR, 0x80); }
+
+    // Set baud rate to 115200 (divisor = 1)
+    // Divisor low byte
+    unsafe { outb(COM1 + REG_DATA, 0x01); }
+    // Divisor high byte
+    unsafe { outb(COM1 + REG_IER, 0x00); }
+
+    // 8 bits, no parity, one stop bit (8N1), clear DLAB
+    unsafe { outb(COM1 + REG_LCR, 0x03); }
+
+    // Enable FIFO, clear them, with 14-byte threshold
+    unsafe { outb(COM1 + REG_FCR, 0xC7); }
+
+    // IRQs enabled, RTS/DSR set (ready to receive)
+    unsafe { outb(COM1 + REG_MCR, 0x0B); }
+}
+
+/// Check if transmit buffer is empty (ready to send)
+fn transmit_empty() -> bool {
+    (unsafe { inb(COM1 + REG_LSR) } & LSR_THRE) != 0
 }
 
 /// Write a single byte to serial
-pub fn write_byte(_byte: u8) {
-    // TODO: Wait for transmit buffer, write byte
+///
+/// Blocks until the transmit buffer is ready.
+pub fn write_byte(byte: u8) {
+    // Wait for transmit buffer to be empty
+    while !transmit_empty() {
+        core::hint::spin_loop();
+    }
+    unsafe { outb(COM1 + REG_DATA, byte); }
 }
 
 /// Write a string to serial
-pub fn write_str(_s: &str) {
-    // TODO: Write each byte
+///
+/// Convenience function that writes a full string.
+/// Automatically converts `\n` to `\r\n` for proper terminal display.
+pub fn write_str(s: &str) {
+    for byte in s.bytes() {
+        if byte == b'\n' {
+            write_byte(b'\r');
+        }
+        write_byte(byte);
+    }
 }
+
+/// Write a null-terminated C string to serial
+///
+/// # Safety
+/// `s` must point to valid null-terminated UTF-8 data.
+/// This is unsafe because it dereferences a raw pointer.
+pub unsafe fn puts(s: *const u8) {
+    let mut ptr = s;
+    while unsafe { *ptr } != 0 {
+        let byte = unsafe { *ptr };
+        if byte == b'\n' {
+            write_byte(b'\r');
+        }
+        write_byte(byte);
+        ptr = ptr.add(1);
+    }
+}
+
+/// Write a Rust string slice to serial
+///
+/// This is a safe wrapper around the unsafe `puts`.
+pub fn puts_str(s: &str) {
+    write_str(s);
+}
+
+/// Write a Rust string literal to serial (convenience macro will use this)
+///
+/// Takes a string literal and writes it directly.
+pub fn puts_lit(s: &'static str) {
+    write_str(s);
+}
+
