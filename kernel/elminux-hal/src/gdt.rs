@@ -163,7 +163,7 @@ impl Gdt {
         // Entries 5-6: TSS (64-bit TSS requires 2 entries)
         let tss_base = core::ptr::addr_of!(TSS) as u64;
         let tss_limit = (core::mem::size_of::<Tss>() - 1) as u16;
-        // Access: Present(1) | DPL 3(11) | Type(1001) = 0x89 for available 64-bit TSS
+        // Access: Present(1) | DPL 0(00) | Type(1001) = 0x89 for available 64-bit TSS
         let (tss_low, tss_high) = Self::create_tss_descriptor(tss_base, tss_limit, 0x89);
         gdt.entries[5] = tss_low;
         gdt.entries[6] = tss_high;
@@ -210,8 +210,12 @@ impl Gdt {
     }
 
     /// Get current TSS pointer
-    pub fn get_tss() -> &'static mut Tss {
-        unsafe { &mut TSS }
+    ///
+    /// # Safety
+    /// This returns a mutable reference to a static, which is inherently unsafe.
+    /// Caller must ensure no concurrent access or aliasing occurs.
+    pub unsafe fn get_tss() -> &'static mut Tss {
+        &mut TSS
     }
 }
 
