@@ -20,8 +20,8 @@ pvh_start:
     // Disable interrupts
     cli
 
-    // Save hvm_start_info pointer (we'll need it for memory map)
-    movl %ebx, %edi
+    // Save hvm_start_info pointer to %ebp (not clobbered by long-mode switch)
+    movl %ebx, %ebp
 
     // Load our minimal 64-bit GDT
     lgdtl (pvh_gdt_descriptor)
@@ -71,8 +71,9 @@ pvh_long_mode:
     rep stosb
 
     // Jump to 64-bit Rust kernel entry
-    // (pass hvm_start_info in rdi for future use)
-    movl %edi, %edi         // zero-extend to 64-bit
+    // Pass hvm_start_info in %rdi (first SysV arg) — zero-extend from %ebp
+    movl %ebp, %edi         // zero-extend hvm_start_info to 64-bit in %rdi
+    xorl %ebp, %ebp         // clear %rbp to mark outermost stack frame
     call _start
 
     // Should never return
@@ -91,7 +92,7 @@ pvh_gdt_descriptor:
     .word pvh_gdt_end - pvh_gdt - 1
     .long pvh_gdt
 
-// ─── Minimal identity-mapped page tables for first 2GB ──────────────────────
+// ─── Minimal identity-mapped page tables for first 4GB ──────────────────────
 // PML4[0] → PDPT
 // PDPT[0..3] → 4 × 1GB huge pages covering 0–4GB identity mapped
 .align 4096

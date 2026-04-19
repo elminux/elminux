@@ -116,15 +116,15 @@ impl Gdt {
     }
 
     /// Create a 64-bit TSS descriptor (uses 2 GDT entries)
-    fn create_tss_descriptor(base: u64, limit: u16, access: u8) -> (u64, u64) {
+    fn create_tss_descriptor(base: u64, limit: u32, access: u8) -> (u64, u64) {
         let limit = limit as u64;
 
         // First 64 bits of TSS descriptor
-        let low = limit & 0xFFFF
-            | ((base & 0xFFFFFF) << 16)
-            | ((access as u64) << 40)
-            | (0x00u64 << 48) // Flags: 0 for TSS
-            | (((base >> 24) & 0xFF) << 56);
+        let low = (limit & 0xFFFF)                    // bits  0-15: limit low
+            | ((base & 0xFFFFFF) << 16)               // bits 16-39: base low + mid
+            | ((access as u64) << 40)                 // bits 40-47: access byte
+            | (((limit >> 16) & 0xF) << 48)           // bits 48-51: limit high nibble
+            | (((base >> 24) & 0xFF) << 56); // bits 56-63: base high byte
 
         // Second 64 bits (high part of 64-bit TSS)
         let high = base >> 32;
@@ -165,7 +165,7 @@ impl Gdt {
 
         // Entries 5-6: TSS (64-bit TSS requires 2 entries)
         let tss_base = core::ptr::addr_of!(TSS) as u64;
-        let tss_limit = (core::mem::size_of::<Tss>() - 1) as u16;
+        let tss_limit = (core::mem::size_of::<Tss>() - 1) as u32;
         // Access: Present(1) | DPL 0(00) | Type(1001) = 0x89 for available 64-bit TSS
         let (tss_low, tss_high) = Self::create_tss_descriptor(tss_base, tss_limit, 0x89);
         gdt.entries[5] = tss_low;
