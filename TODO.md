@@ -90,9 +90,9 @@ Status tags: [ ] todo | [x] done | [~] in-progress | [!] blocked
   - [x] 4.5.1 Disable legacy PIC (8259) via masking
   - [x] 4.5.2 Initialize local APIC at 0xFEE00000
   - [x] 4.5.3 APIC timer configuration (calibrate + periodic mode)
-- [ ] 4.6 Basic ACPI table parsing (RSDP → RSDT/XSDT)
-  - [ ] 4.6.1 Locate RSDP from Limine
-  - [ ] 4.6.2 Parse MADT (interrupt routing)
+- [x] 4.6 Basic ACPI table parsing (RSDP → RSDT/XSDT)
+  - [x] 4.6.1 Locate RSDP from Limine — parse RSDP v1/v2 with validation
+  - [x] 4.6.2 Parse MADT — Local APIC + IO-APIC enumeration
 - [ ] 4.7 Port I/O primitives (`inb`, `outb`, `inw`, `outw`, `inl`, `outl`)
 - [ ] 4.8 MMIO read/write primitives (volatile, fenced)
 - [ ] 4.9 Milestone: kernel boots in QEMU, prints "Elminux v0.2.0" via serial
