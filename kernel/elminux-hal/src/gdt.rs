@@ -101,14 +101,15 @@ impl Gdt {
     /// Create a code/data segment descriptor
     fn create_segment(base: u32, limit: u32, access: u8, granularity: u8) -> u64 {
         let mut descriptor: u64 = 0;
-        // Limit (bits 0-15)
+        // Limit low (bits 0-15)
         descriptor |= (limit & 0xFFFF) as u64;
-        // Base (bits 16-39)
+        // Base low (bits 16-39)
         descriptor |= ((base & 0xFFFFFF) as u64) << 16;
         // Access byte (bits 40-47)
         descriptor |= (access as u64) << 40;
-        // Granularity (bits 48-55)
-        descriptor |= (granularity as u64) << 48;
+        // Limit high nibble (bits 48-51) + flags (bits 52-55: G, D/B, L, AVL)
+        descriptor |= (((limit >> 16) & 0xF) as u64) << 48;
+        descriptor |= (granularity as u64) << 52;
         // Base high (bits 56-63)
         descriptor |= ((base >> 24) as u64) << 56;
         descriptor
@@ -142,23 +143,25 @@ impl Gdt {
         // Entry 0: Null segment
         gdt.entries[0] = 0;
 
-        // Entry 1 (0x08): Kernel code segment - ring 0, execute/read
+        // Entry 1 (0x08): Kernel code segment - ring 0, execute/read, 64-bit
         // Access: Present(1) | DPL 0(00) | S(1) | Code(1) | Conforming(0) | Readable(1) | Accessed(0) = 0x9A
-        // Granularity: G(1) | D/B(0) | L(1 for 64-bit) | AVL(0) | Limit high(1111) = 0xAF for 64-bit
-        gdt.entries[1] = Self::create_segment(0, 0xFFFFF, 0x9A, 0xA0);
+        // Flags nibble (bits 52-55): G=1 | D/B=0 | L=1 (64-bit) | AVL=0 = 0xA
+        gdt.entries[1] = Self::create_segment(0, 0xFFFFF, 0x9A, 0xA);
 
         // Entry 2 (0x10): Kernel data segment - ring 0, read/write
         // Access: Present(1) | DPL 0(00) | S(1) | Data(0) | Expand-down(0) | Writable(1) | Accessed(0) = 0x92
-        // Granularity: G(1) | D/B(1) | L(0) | AVL(0) | Limit high(1111) = 0xCF
-        gdt.entries[2] = Self::create_segment(0, 0xFFFFF, 0x92, 0xC0);
+        // Flags nibble (bits 52-55): G=1 | D/B=1 | L=0 | AVL=0 = 0xC
+        gdt.entries[2] = Self::create_segment(0, 0xFFFFF, 0x92, 0xC);
 
-        // Entry 3 (0x18): User code segment - ring 3, execute/read
+        // Entry 3 (0x18): User code segment - ring 3, execute/read, 64-bit
         // Access: Present(1) | DPL 3(11) | S(1) | Code(1) | Conforming(0) | Readable(1) | Accessed(0) = 0xFA
-        gdt.entries[3] = Self::create_segment(0, 0xFFFFF, 0xFA, 0xA0);
+        // Flags nibble (bits 52-55): G=1 | D/B=0 | L=1 (64-bit) | AVL=0 = 0xA
+        gdt.entries[3] = Self::create_segment(0, 0xFFFFF, 0xFA, 0xA);
 
         // Entry 4 (0x20): User data segment - ring 3, read/write
         // Access: Present(1) | DPL 3(11) | S(1) | Data(0) | Expand-down(0) | Writable(1) | Accessed(0) = 0xF2
-        gdt.entries[4] = Self::create_segment(0, 0xFFFFF, 0xF2, 0xC0);
+        // Flags nibble (bits 52-55): G=1 | D/B=1 | L=0 | AVL=0 = 0xC
+        gdt.entries[4] = Self::create_segment(0, 0xFFFFF, 0xF2, 0xC);
 
         // Entries 5-6: TSS (64-bit TSS requires 2 entries)
         let tss_base = core::ptr::addr_of!(TSS) as u64;

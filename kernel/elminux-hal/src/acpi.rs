@@ -210,7 +210,11 @@ pub unsafe fn find_table(rsdp_addr: u64, signature: &[u8; 4]) -> Option<u64> {
         let xsdt_header = get_sdt_header(xsdt_addr);
 
         // Calculate number of entries: (total size - header size) / 8
-        let entry_count = ((xsdt_header.length as usize) - mem::size_of::<SdtHeader>()) / 8;
+        let xsdt_len = xsdt_header.length as usize;
+        if xsdt_len < mem::size_of::<SdtHeader>() {
+            return None;
+        }
+        let entry_count = (xsdt_len - mem::size_of::<SdtHeader>()) / 8;
 
         for i in 0..entry_count {
             let entry_addr = xsdt_addr + mem::size_of::<SdtHeader>() as u64 + (i * 8) as u64;
@@ -227,7 +231,11 @@ pub unsafe fn find_table(rsdp_addr: u64, signature: &[u8; 4]) -> Option<u64> {
         let rsdt_header = get_sdt_header(rsdt_addr);
 
         // Calculate number of entries: (total size - header size) / 4
-        let entry_count = ((rsdt_header.length as usize) - mem::size_of::<SdtHeader>()) / 4;
+        let rsdt_len = rsdt_header.length as usize;
+        if rsdt_len < mem::size_of::<SdtHeader>() {
+            return None;
+        }
+        let entry_count = (rsdt_len - mem::size_of::<SdtHeader>()) / 4;
 
         for i in 0..entry_count {
             let entry_addr = rsdt_addr + mem::size_of::<SdtHeader>() as u64 + (i * 4) as u64;
@@ -296,7 +304,10 @@ pub unsafe fn parse_madt(madt_addr: u64) -> Option<ApicInfo> {
             }
         }
 
-        // Move to next entry
+        // Move to next entry; guard against zero-length to prevent infinite loop
+        if entry_header.length < 2 {
+            break;
+        }
         current += entry_header.length as u64;
     }
 

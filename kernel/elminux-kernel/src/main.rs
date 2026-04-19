@@ -6,7 +6,24 @@
 #![no_std]
 #![no_main]
 
+use core::arch::global_asm;
 use core::panic::PanicInfo;
+
+// PVH ELF Note for QEMU direct kernel boot
+// This tells QEMU that our kernel supports the PVH boot protocol
+// The note format: name="QEMU", type=0x3 (PVH), desc=0x1 (minimal features)
+global_asm!(
+    r#"
+    .section .note.pvh, "a", @note
+    .align 4
+    .long 5           // namesz (including null terminator: "QEMU\0")
+    .long 4           // descsz (4 bytes for descriptor)
+    .long 0x3         // type (PVH = 0x3)
+    .asciz "QEMU"     // name (5 bytes: Q,U,E,M,\0)
+    .align 4
+    .long 0x1         // desc: minimal PVH features
+    "#
+);
 use elminux_hal::apic;
 use elminux_hal::gdt;
 use elminux_hal::idt;
