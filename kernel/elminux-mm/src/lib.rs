@@ -7,9 +7,9 @@
 
 extern crate alloc;
 
+pub mod heap;
 pub mod pmm;
 pub mod vmm;
-pub mod heap;
 
 /// Initialize memory manager with Limine-provided memory map
 pub fn init(_memory_map: &[MemoryRegion]) {

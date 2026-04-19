@@ -4,20 +4,20 @@
 
 #![no_std]
 
+pub mod env;
 pub mod io;
 pub mod ipc;
-pub mod thread;
 pub mod string;
-pub mod env;
+pub mod thread;
 
 // Re-export alloc collections
 extern crate alloc;
-pub use alloc::collections;
-pub use alloc::string;
-pub use alloc::vec;
 pub use alloc::boxed;
+pub use alloc::collections;
 pub use alloc::rc;
+pub use alloc::string;
 pub use alloc::sync;
+pub use alloc::vec;
 
 /// Initialize standard library
 pub fn init() {

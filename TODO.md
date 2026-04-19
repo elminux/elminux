@@ -86,10 +86,10 @@ Status tags: [ ] todo | [x] done | [~] in-progress | [!] blocked
 - [x] 4.4 Implement basic serial output (UART 16550)
   - [x] 4.4.1 `write_byte`, `write_str` to COM1 at 115200 baud
   - [x] 4.4.2 Kernel `print!` / `println!` macros via serial
-- [ ] 4.5 Implement APIC (Advanced Programmable Interrupt Controller)
-  - [ ] 4.5.1 Disable legacy PIC (8259)
-  - [ ] 4.5.2 Initialize local APIC
-  - [ ] 4.5.3 APIC timer (preemption clock)
+- [x] 4.5 Implement APIC (Advanced Programmable Interrupt Controller)
+  - [x] 4.5.1 Disable legacy PIC (8259) via masking
+  - [x] 4.5.2 Initialize local APIC at 0xFEE00000
+  - [x] 4.5.3 APIC timer configuration (calibrate + periodic mode)
 - [ ] 4.6 Basic ACPI table parsing (RSDP → RSDT/XSDT)
   - [ ] 4.6.1 Locate RSDP from Limine
   - [ ] 4.6.2 Parse MADT (interrupt routing)

@@ -5,8 +5,8 @@
 #![no_std]
 
 pub mod capability;
-pub mod message;
 pub mod channel;
+pub mod message;
 
 /// Capability rights flags
 pub mod rights {

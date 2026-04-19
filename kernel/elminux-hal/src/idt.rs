@@ -68,10 +68,7 @@ impl IdtEntry {
 static mut IDT: Idt = Idt::new();
 
 /// IDT descriptor for lidt instruction
-static mut IDT_DESCRIPTOR: IdtDescriptor = IdtDescriptor {
-    limit: 0,
-    base: 0,
-};
+static mut IDT_DESCRIPTOR: IdtDescriptor = IdtDescriptor { limit: 0, base: 0 };
 
 /// Initialize IDT with exception handlers
 ///
@@ -115,11 +112,8 @@ pub unsafe fn init() {
 unsafe extern "C" fn generic_exception_handler() {
     // SAFETY: Naked function - only inline assembly is allowed here.
     core::arch::naked_asm!(
-        "cli",
-        // TODO: Save registers, print exception info, halt
-        "2:",
-        "hlt",
-        "jmp 2b",
+        "cli", // TODO: Save registers, print exception info, halt
+        "2:", "hlt", "jmp 2b",
     );
 }
 
@@ -131,8 +125,7 @@ unsafe extern "C" fn generic_exception_handler() {
 unsafe extern "C" fn generic_irq_handler() {
     // SAFETY: Naked function - only inline assembly is allowed here.
     core::arch::naked_asm!(
-        "cli",
-        // TODO: Save registers, send EOI, call handler
+        "cli", // TODO: Save registers, send EOI, call handler
         "iretq",
     );
 }

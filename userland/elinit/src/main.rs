@@ -6,13 +6,7 @@
 #![no_main]
 
 /// Driver spawn order
-const DRIVER_ORDER: &[&str] = &[
-    "serial",
-    "keyboard",
-    "framebuffer",
-    "block",
-    "fs",
-];
+const DRIVER_ORDER: &[&str] = &["serial", "keyboard", "framebuffer", "block", "fs"];
 
 fn main() {
     // TODO: Read capability manifest from kernel

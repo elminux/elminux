@@ -7,6 +7,7 @@
 #![no_main]
 
 use core::panic::PanicInfo;
+use elminux_hal::apic;
 use elminux_hal::gdt;
 use elminux_hal::idt;
 use elminux_hal::uart;
@@ -31,6 +32,9 @@ pub extern "C" fn _start() -> ! {
 
         // 4.4 Initialize serial output for debugging
         uart::init();
+
+        // 4.5 Initialize APIC (disable PIC, enable local APIC)
+        apic::init();
     }
 
     // Print boot banner
@@ -43,6 +47,7 @@ pub extern "C" fn _start() -> ! {
     println!("[BOOT] GDT initialized");
     println!("[BOOT] IDT initialized");
     println!("[BOOT] UART initialized");
+    println!("[BOOT] APIC initialized (PIC disabled, local APIC enabled)");
     println!("[BOOT] Kernel boot sequence complete");
     println!();
 
@@ -52,7 +57,9 @@ pub extern "C" fn _start() -> ! {
 
     // Halt loop - replace with scheduler when ready
     loop {
-        unsafe { core::arch::asm!("hlt"); }
+        unsafe {
+            core::arch::asm!("hlt");
+        }
     }
 }
 
@@ -66,6 +73,8 @@ fn panic(_info: &PanicInfo) -> ! {
 
     // Halt forever
     loop {
-        unsafe { core::arch::asm!("cli; hlt"); }
+        unsafe {
+            core::arch::asm!("cli; hlt");
+        }
     }
 }

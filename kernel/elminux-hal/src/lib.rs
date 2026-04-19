@@ -4,9 +4,9 @@
 
 #![no_std]
 
+pub mod acpi;
+pub mod apic;
 pub mod gdt;
 pub mod idt;
-pub mod apic;
-pub mod uart;
-pub mod acpi;
 pub mod port;
+pub mod uart;

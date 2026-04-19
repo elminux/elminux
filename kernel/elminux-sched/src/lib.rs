@@ -6,9 +6,9 @@
 
 extern crate alloc;
 
-pub mod task;
 pub mod context;
 pub mod queue;
+pub mod task;
 
 /// Initialize scheduler
 pub fn init() {
