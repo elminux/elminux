@@ -96,7 +96,13 @@ Status tags: [ ] todo | [x] done | [~] in-progress | [!] blocked
 - [x] 4.7 Port I/O primitives (`inb`, `outb`, `inw`, `outw`, `inl`, `outl`)
   - All 6 primitives implemented in `port.rs` with inline assembly
   - 8-bit, 16-bit, 32-bit variants with proper register constraints
-- [ ] 4.8 MMIO read/write primitives (volatile, fenced)
+- [x] 4.8 MMIO read/write primitives (volatile, fenced)
+  - New `mmio.rs` module with 8/16/32/64-bit variants
+  - `read8/16/32/64` and `write8/16/32/64` with proper safety docs
+  - Memory fencing: `fence()`, `fence_read()`, `fence_write()`
+  - Acquire/release variants for device synchronization
+  - `fence_mfence()` for write-combine buffer flush
+  - APIC module updated to use mmio primitives
 - [ ] 4.9 Milestone: kernel boots in QEMU, prints "Elminux v0.2.0" via serial
 
 ### 5. Memory Manager (`elminux-mm`)

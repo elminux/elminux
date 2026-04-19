@@ -7,6 +7,7 @@
 //! - Initializing local APIC (MMIO at 0xFEE00000)
 //! - APIC timer configuration for preemption
 
+use crate::mmio::{read32, write32};
 use crate::port::{inb, outb};
 
 /// Local APIC base address (mapped by firmware/limine)
@@ -79,8 +80,7 @@ const OCW3_READ_ISR: u8 = 0x0B;
 /// Must only be called after local APIC is mapped and accessible.
 /// Caller must ensure `offset` is a valid APIC register offset.
 unsafe fn read_reg(offset: u64) -> u32 {
-    let addr = LOCAL_APIC_BASE + offset;
-    core::ptr::read_volatile(addr as *const u32)
+    read32(LOCAL_APIC_BASE + offset)
 }
 
 /// Write 32-bit value to local APIC register
@@ -89,8 +89,7 @@ unsafe fn read_reg(offset: u64) -> u32 {
 /// Must only be called after local APIC is mapped and accessible.
 /// Caller must ensure `offset` is a valid APIC register offset.
 unsafe fn write_reg(offset: u64, value: u32) {
-    let addr = LOCAL_APIC_BASE + offset;
-    core::ptr::write_volatile(addr as *mut u32, value);
+    write32(LOCAL_APIC_BASE + offset, value);
 }
 
 /// Disable legacy PIC (8259) by masking all interrupts
