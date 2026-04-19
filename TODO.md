@@ -93,7 +93,9 @@ Status tags: [ ] todo | [x] done | [~] in-progress | [!] blocked
 - [x] 4.6 Basic ACPI table parsing (RSDP → RSDT/XSDT)
   - [x] 4.6.1 Locate RSDP from Limine — parse RSDP v1/v2 with validation
   - [x] 4.6.2 Parse MADT — Local APIC + IO-APIC enumeration
-- [ ] 4.7 Port I/O primitives (`inb`, `outb`, `inw`, `outw`, `inl`, `outl`)
+- [x] 4.7 Port I/O primitives (`inb`, `outb`, `inw`, `outw`, `inl`, `outl`)
+  - All 6 primitives implemented in `port.rs` with inline assembly
+  - 8-bit, 16-bit, 32-bit variants with proper register constraints
 - [ ] 4.8 MMIO read/write primitives (volatile, fenced)
 - [ ] 4.9 Milestone: kernel boots in QEMU, prints "Elminux v0.2.0" via serial
 
