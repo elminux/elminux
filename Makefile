@@ -20,29 +20,29 @@ $(BUILD_DIR)/release/elminux-kernel:
 $(BUILD_DIR)/debug/elminux-kernel:
 	cargo build -p $(KERNEL_CRATE)
 
-# Run in QEMU
-qemu: $(BUILD_DIR)/debug/elminux-kernel limine
+# Run in QEMU (serial output to stdio)
+qemu: $(BUILD_DIR)/debug/elminux-kernel
 	qemu-system-x86_64 \
 		-cpu qemu64,+apic,+acpi \
 		-smp 1 \
 		-m 512M \
 		-serial stdio \
+		-display none \
 		-no-reboot \
 		-no-shutdown \
-		-kernel $< \
-		-append "console=serial"
+		-kernel $<
 
 # Run release build in QEMU
-qemu-release: $(BUILD_DIR)/release/elminux-kernel limine
+qemu-release: $(BUILD_DIR)/release/elminux-kernel
 	qemu-system-x86_64 \
 		-cpu qemu64,+apic,+acpi \
 		-smp 1 \
 		-m 512M \
 		-serial stdio \
+		-display none \
 		-no-reboot \
 		-no-shutdown \
-		-kernel $< \
-		-append "console=serial"
+		-kernel $<
 
 # Create bootable ISO
 iso: $(BUILD_DIR)/release/elminux-kernel limine
