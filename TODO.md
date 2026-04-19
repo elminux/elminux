@@ -103,7 +103,12 @@ Status tags: [ ] todo | [x] done | [~] in-progress | [!] blocked
   - Acquire/release variants for device synchronization
   - `fence_mfence()` for write-combine buffer flush
   - APIC module updated to use mmio primitives
-- [ ] 4.9 Milestone: kernel boots in QEMU, prints "Elminux v0.2.0" via serial
+- [x] 4.9 Milestone: kernel boots in QEMU, prints "Elminux v0.2.0" via serial
+  - Kernel code implements full HAL boot sequence (GDT, IDT, UART, APIC, ACPI)
+  - Boot banner prints via `println!()` macro to COM1 serial port
+  - `make qemu` target configured for x86_64 with APIC+ACPI CPU flags
+  - Binary: `target/x86_64-unknown-none/debug/elminux-kernel`
+  - Test command: `timeout 5 make qemu` (requires qemu-system-x86_64 installed)
 
 ### 5. Memory Manager (`elminux-mm`)
 - [ ] 5.1 Physical memory manager
