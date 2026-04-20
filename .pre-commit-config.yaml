@@ -1,0 +1,59 @@
+# Elminux pre-commit configuration
+# See https://pre-commit.com for details
+
+repos:
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: \.(md|txt)$
+      - id: end-of-file-fixer
+        exclude: \.(md|txt)$
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+      - id: check-merge-conflict
+      - id: check-symlinks
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+      - id: check-case-conflict
+
+  # Rust formatting
+  - repo: https://github.com/doublify/pre-commit-rust
+    rev: v1.0
+    hooks:
+      - id: fmt
+        args: ['--all']
+
+  # Rust clippy
+  - repo: https://github.com/doublify/pre-commit-rust
+    rev: v1.0
+    hooks:
+      - id: clippy
+        args: ['--', '-D', 'warnings']
+        pass_filenames: false
+
+  # Cargo check (fast compile check)
+  - repo: local
+    hooks:
+      - id: cargo-check
+        name: cargo check
+        entry: cargo check --workspace
+        language: system
+        pass_filenames: false
+        types: [rust]
+
+  # Deny license/advisory check (if cargo-deny installed)
+  - repo: local
+    hooks:
+      - id: cargo-deny
+        name: cargo deny check
+        entry: cargo deny check
+        language: system
+        pass_filenames: false
+        files: Cargo\.(toml|lock)$
+        # Only run if cargo-deny is installed
+        stages: [manual]
