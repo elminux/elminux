@@ -109,6 +109,16 @@ Status tags: [ ] todo | [x] done | [~] in-progress | [!] blocked
   - `make qemu` target configured for x86_64 with APIC+ACPI CPU flags
   - Binary: `target/x86_64-unknown-none/debug/elminux-kernel`
   - Test command: `timeout 5 make qemu` (requires qemu-system-x86_64 installed)
+- [ ] 4.10 Identity-map teardown after `elminux-mm::init()`
+  - [ ] 4.10.1 Drop PVH trampoline's 0–4GB identity map
+  - [ ] 4.10.2 Verify no kernel code still relies on `virt == phys`
+  - [ ] 4.10.3 Add QEMU test: kernel touches identity range post-teardown → page fault (expected)
+- [ ] 4.11 Pin `rust-toolchain.toml` to a dated nightly (`nightly-YYYY-MM-DD`)
+  - [ ] 4.11.1 Replace `channel = "nightly"` with dated nightly
+  - [ ] 4.11.2 Document bump policy: monthly, via PR with build matrix green
+- [ ] 4.12 Pin `userland/modsh` submodule by commit SHA (not branch)
+  - [ ] 4.12.1 Update `.gitmodules` to track specific SHA
+  - [ ] 4.12.2 Document bump procedure in CONTRIBUTING.md
 
 ### 5. Memory Manager (`elminux-mm`)
 - [ ] 5.1 Physical memory manager
@@ -122,11 +132,29 @@ Status tags: [ ] todo | [x] done | [~] in-progress | [!] blocked
   - [ ] 5.2.3 `unmap_page(virt)`
   - [ ] 5.2.4 Higher-half kernel mapping
   - [ ] 5.2.5 TLB flush on unmap
+  - [ ] 5.2.6 `teardown_identity()` — drop PVH identity map (called from 4.10)
 - [ ] 5.3 Kernel heap allocator
   - [ ] 5.3.1 Slab allocator for fixed-size kernel objects
   - [ ] 5.3.2 Global allocator registration (`#[global_allocator]`)
   - [ ] 5.3.3 `alloc` crate available in kernel
 - [ ] 5.4 Milestone: kernel allocates heap objects, no panics
+
+---
+
+## v0.2.1 — HAL Multi-Arch Refactor
+
+### 4a. HAL Split (Trait + Per-Arch)
+- [ ] 4a.1 Create `kernel/elminux-hal-x86_64` crate
+  - [ ] 4a.1.1 Move all current `elminux-hal/src/*` x86_64-specific code into it
+  - [ ] 4a.1.2 Add `[package] name = "elminux-hal-x86_64"` to Cargo.toml
+- [ ] 4a.2 Reduce `kernel/elminux-hal` to trait definitions only
+  - [ ] 4a.2.1 Trait: `Hal` (init, irq_enable/disable, port/mmio, tlb_flush, ...)
+  - [ ] 4a.2.2 Arch-neutral types only — no `asm!`, no per-arch constants
+- [ ] 4a.3 Wire `cfg(target_arch)` selection
+  - [ ] 4a.3.1 `elminux-hal` re-exports `elminux_hal_x86_64::*` on x86_64
+  - [ ] 4a.3.2 Compile failure if unknown target_arch (explicit allowlist)
+- [ ] 4a.4 Verify kernel crate depends only on `elminux-hal` (not `-x86_64` directly)
+- [ ] 4a.5 Milestone: `cargo build` on x86_64-unknown-none succeeds unchanged
 
 ---
 
@@ -167,12 +195,25 @@ Status tags: [ ] todo | [x] done | [~] in-progress | [!] blocked
 - [ ] 7.8 Add performance regression check to CI
   - [ ] 7.8.1 >20% regression on any target = build failure
   - [ ] 7.8.2 Publish benchmark results in release notes
+- [ ] 7.9 Benchmark: notification round-trip (`sys_notify` → `sys_wait` wake)
+  - [ ] 7.9.1 Target: < 200ns, same-core
+- [ ] 7.10 Benchmark: IRQ → userspace wake latency
+  - [ ] 7.10.1 Target: < 1µs, same-core
 
 ### 8. IPC Primitives (`elminux-ipc`)
 - [ ] 8.1 Define capability model
   - [ ] 8.1.1 `Cap` type — unforgeable token (kernel-managed integer)
   - [ ] 8.1.2 Capability table per process
   - [ ] 8.1.3 Capability rights flags (read, write, grant, revoke)
+  - [ ] 8.1.4 Capability Derivation Tree (CDT) per kernel object
+    - [ ] 8.1.4.1 Parent-pointer nodes allocated at derivation time
+    - [ ] 8.1.4.2 Cascading walk for `sys_cap_revoke` (all derived caps invalidated)
+  - [ ] 8.1.5 Monotonic narrowing invariant: `derived.rights ⊆ parent.rights`
+    - [ ] 8.1.5.1 Enforced at `sys_cap_grant` entry
+    - [ ] 8.1.5.2 Unit test: grant with wider rights than parent → `EPERM`
+  - [ ] 8.1.6 Capability space layout: per-process flat array, `Cap = u32` index
+    - [ ] 8.1.6.1 Max 65536 caps per process in v1 ABI
+    - [ ] 8.1.6.2 Unused indices rejected with `EBADCAP`
 - [ ] 8.2 Define `Msg` type — fixed-size message (register-sized fields)
 - [ ] 8.3 Implement synchronous message passing
   - [ ] 8.3.1 `sys_send(cap, msg)` — blocks until receiver calls recv
@@ -181,6 +222,16 @@ Status tags: [ ] todo | [x] done | [~] in-progress | [!] blocked
 - [ ] 8.4 Implement fast path (zero-copy, no allocation on hot path)
 - [ ] 8.5 Implement channel pairs (bidirectional)
 - [ ] 8.6 Milestone: two processes exchange messages via IPC in QEMU, latency < 500ns
+- [ ] 8.7 Notification primitive (async signal, seL4-style)
+  - [ ] 8.7.1 `sys_notify(cap)` — set bits in kernel notification word, non-blocking
+  - [ ] 8.7.2 `sys_wait(cap) -> u64` — block until word non-zero, atomic read+clear
+  - [ ] 8.7.3 `sys_poll(cap) -> u64` — non-blocking read+clear
+  - [ ] 8.7.4 Milestone: notification round-trip < 200ns
+- [ ] 8.8 IRQ delivery to userspace drivers
+  - [ ] 8.8.1 Kernel IRQ capability — issued to `elinit` per-vector at boot
+  - [ ] 8.8.2 ISR sets notification bit + APIC ack — no scheduler invocation on hot path
+  - [ ] 8.8.3 Userspace IRQ thread blocks on `sys_wait(notify_cap)`
+  - [ ] 8.8.4 Milestone: PS/2 keyboard driver receives IRQ1 in userspace, < 1µs wake
 
 ---
 
@@ -201,6 +252,11 @@ Status tags: [ ] todo | [x] done | [~] in-progress | [!] blocked
   - [ ] 8.4.6 `sys_free_pages(addr, n)`
   - [ ] 8.4.7 `sys_spawn(manifest) -> Cap`
   - [ ] 8.4.8 `sys_cap_drop(cap)`
+  - [ ] 8.4.9 `sys_notify(cap)` — set notification bits, non-blocking
+  - [ ] 8.4.10 `sys_wait(cap) -> u64` — block until notification
+  - [ ] 8.4.11 `sys_poll(cap) -> u64` — non-blocking read+clear
+  - [ ] 8.4.12 `sys_cap_grant(target: Pid, cap: Cap, rights: Rights) -> Cap`
+  - [ ] 8.4.13 `sys_cap_revoke(cap)` — cascading revoke via CDT
 - [ ] 8.5 User space enters via ELF loader (kernel-side)
   - [ ] 8.5.1 Minimal ELF64 loader in kernel
   - [ ] 8.5.2 Set up user stack
@@ -219,6 +275,7 @@ Status tags: [ ] todo | [x] done | [~] in-progress | [!] blocked
 - [ ] 9.3 IPC bindings
   - [ ] 9.3.1 Safe wrappers around `sys_send` / `sys_recv`
   - [ ] 9.3.2 Typed channel API
+  - [ ] 9.3.3 Safe wrappers around `sys_notify` / `sys_wait` / `sys_poll`
 - [ ] 9.4 Threading primitives
   - [ ] 9.4.1 `Thread::spawn()` → `sys_spawn()`
   - [ ] 9.4.2 `Mutex<T>` (IPC-based, no spinlock in user space)
@@ -230,6 +287,25 @@ Status tags: [ ] todo | [x] done | [~] in-progress | [!] blocked
 
 ## v0.5.0 — Drivers & Device Layer
 
+### 9a. ACPI AML Interpreter
+- [ ] 9a.1 Integrate `acpi` + `aml` Rust crates (Isaac Woods)
+  - [ ] 9a.1.1 Pin versions in workspace Cargo.toml
+  - [ ] 9a.1.2 `cargo-deny` license check (both MIT/Apache-2.0)
+- [ ] 9a.2 Parse DSDT + SSDT at boot
+  - [ ] 9a.2.1 Populate kernel device tree from AML namespace
+  - [ ] 9a.2.2 Expose device enumeration via capability to `elinit`
+- [ ] 9a.3 Parse FADT — expose PM timer, ACPI shutdown vector
+- [ ] 9a.4 Parse HPET table — expose as timer source alternative to PIT
+- [ ] 9a.5 Parse MCFG — PCIe ECAM base for bus enumeration
+- [ ] 9a.6 Milestone: kernel enumerates PCI devices via ACPI+MCFG, no PIT calibration
+
+### 9b. Re-home Driver ABI Crate
+- [ ] 9b.1 Move `kernel/elminux-drivers` → `abi/elminux-driver-abi`
+  - [ ] 9b.1.1 Contains Driver trait + shared message types only
+  - [ ] 9b.1.2 Update workspace members + all `Cargo.toml` dep paths
+- [ ] 9b.2 Create `userland/drivers/` directory for driver binaries
+- [ ] 9b.3 Milestone: kernel/userland split is structurally obvious in tree
+
 ### 10. Driver Framework (`elminux-drivers`)
 - [ ] 10.1 Define `Driver` trait
   - [ ] 10.1.1 `init() -> Result<Cap>`
@@ -238,6 +314,8 @@ Status tags: [ ] todo | [x] done | [~] in-progress | [!] blocked
 - [ ] 10.3 Implement serial driver (user space server)
   - [ ] 10.3.1 UART 16550 via port I/O capability
   - [ ] 10.3.2 IPC interface: `write(bytes)`, `read() -> bytes`
+  - [ ] 10.3.3 Kernel early-boot serial yields ownership to userspace server on `elinit` ready
+  - [ ] 10.3.4 Panic path retains kernel serial access (spinlock + `cli`)
 - [ ] 10.4 Implement keyboard driver (user space server)
   - [ ] 10.4.1 PS/2 keyboard via IRQ1
   - [ ] 10.4.2 Scancode → keycode translation
@@ -355,6 +433,28 @@ Status tags: [ ] todo | [x] done | [~] in-progress | [!] blocked
 - [ ] 17.5 Stack canaries in kernel (via compiler flag)
 - [ ] 17.6 Implement `cargo-deny` policy (no GPL-incompatible deps)
 - [ ] 17.7 SBOM generation on every release (cargo-cyclonedx)
+- [ ] 17.8 KPTI (Meltdown) — CR3 switch on syscall, CPUID-gated
+  - [ ] 17.8.1 Detect Meltdown-vulnerable CPUs via CPUID
+  - [ ] 17.8.2 Shadow page table for user-visible kernel entries
+  - [ ] 17.8.3 Measure syscall cost both with and without KPTI
+- [ ] 17.9 Spectre v1 — `lfence` barriers at syscall-dispatch branch points
+- [ ] 17.10 Spectre v2 — IBRS + IBPB on context switch; retpolines as fallback
+  - [ ] 17.10.1 Enable `-Zretpoline` in kernel build profile
+  - [ ] 17.10.2 IBPB on cross-process context switch
+- [ ] 17.11 L1TF — PTE inversion for non-present entries
+- [ ] 17.12 MDS / TAA — VERW buffer clear on kernel exit
+- [ ] 17.13 Retbleed — untrained return predictor clear on context switch
+- [ ] 17.14 SSB — opt-in per-process via capability (off by default)
+- [ ] 17.15 Build reproducibility
+  - [ ] 17.15.1 Respect `SOURCE_DATE_EPOCH` in all build scripts
+  - [ ] 17.15.2 Deterministic symbol mangling (`-Zremap-path-prefix`)
+  - [ ] 17.15.3 CI: two independent builds, byte-compare kernel ELF hashes
+- [ ] 17.16 SLSA v1.0 provenance
+  - [ ] 17.16.1 Generate provenance for kernel ELF, ISO, `.epkg` artifacts
+  - [ ] 17.16.2 Sign provenance with Elminux release key
+  - [ ] 17.16.3 Document verification steps in `docs/verifying-builds.md`
+- [ ] 17.17 Userspace hardening doc (`docs/userspace-hardening.md`)
+  - [ ] 17.17.1 ASLR, W^X, stack canaries, CFI for userspace binaries
 
 ### 18. Testing
 - [ ] 18.1 Kernel unit tests (QEMU headless, `x86_64-unknown-none`)
@@ -362,6 +462,8 @@ Status tags: [ ] todo | [x] done | [~] in-progress | [!] blocked
   - [ ] 18.1.2 Page table tests
   - [ ] 18.1.3 IPC message passing tests
   - [ ] 18.1.4 Scheduler round-robin tests
+  - [ ] 18.1.5 Capability derivation + revocation tests (CDT)
+  - [ ] 18.1.6 Notification wake tests
 - [ ] 18.2 Integration tests (full boot in QEMU, scripted)
   - [ ] 18.2.1 Boot to shell prompt
   - [ ] 18.2.2 File read/write
@@ -405,6 +507,8 @@ Status tags: [ ] todo | [x] done | [~] in-progress | [!] blocked
 
 ### System
 - [ ] B.7 SMP (multi-core scheduler)
+  - Note: single-core IPC targets in §7 do not carry over to cross-core;
+    cross-core numbers tracked as separate metrics once SMP lands
 - [ ] B.8 Network stack (TCP/IP in Rust, user space server)
 - [ ] B.9 TLS (rustls-based)
 - [ ] B.10 Display server (Wayland-inspired, no X11)
