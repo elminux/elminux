@@ -5,8 +5,7 @@
 #![no_std]
 #![no_main]
 
-use elminux_std::io::Write;
-use elminux_std::string::ElString;
+use elminux_std::string::String;
 
 /// Package manager commands
 enum Command {

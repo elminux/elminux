@@ -17,7 +17,7 @@ pub struct Registry {
 impl Registry {
     pub const fn new() -> Self {
         Self {
-            entries: [None; 16],
+            entries: [const { None }; 16],
             count: 0,
         }
     }

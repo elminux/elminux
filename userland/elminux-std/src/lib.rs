@@ -4,6 +4,21 @@
 
 #![no_std]
 
+use core::alloc::{GlobalAlloc, Layout};
+
+/// Placeholder global allocator - panics until real allocator implemented (milestone 5.3)
+pub struct PlaceholderAlloc;
+
+unsafe impl GlobalAlloc for PlaceholderAlloc {
+    unsafe fn alloc(&self, _layout: Layout) -> *mut u8 {
+        panic!("Global allocator not yet implemented - milestone 5.3 pending")
+    }
+    unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {}
+}
+
+#[global_allocator]
+static ALLOCATOR: PlaceholderAlloc = PlaceholderAlloc;
+
 pub mod env;
 pub mod io;
 pub mod ipc;
@@ -15,9 +30,9 @@ extern crate alloc;
 pub use alloc::boxed;
 pub use alloc::collections;
 pub use alloc::rc;
-pub use alloc::string;
 pub use alloc::sync;
 pub use alloc::vec;
+// Note: alloc::string not re-exported - local string module provides String
 
 /// Initialize standard library
 pub fn init() {

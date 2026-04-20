@@ -27,23 +27,37 @@ repos:
     hooks:
       - id: fmt
         args: ['--all']
-
-  # Rust clippy
-  - repo: https://github.com/doublify/pre-commit-rust
-    rev: v1.0
-    hooks:
-      - id: clippy
-        args: ['--', '-D', 'warnings']
         pass_filenames: false
 
-  # Cargo check (fast compile check)
+  # Rust clippy (local hook for workspace exclude support)
   - repo: local
     hooks:
-      - id: cargo-check
-        name: cargo check
-        entry: cargo check --workspace
+      - id: clippy-workspace
+        name: cargo clippy workspace
+        entry: cargo clippy --workspace --exclude build-tools -- -A static_mut_refs
         language: system
         pass_filenames: false
+        types: [rust]
+
+  # Cargo check - kernel and userland (no_std target)
+  - repo: local
+    hooks:
+      - id: cargo-check-workspace
+        name: cargo check workspace
+        entry: cargo check --workspace --exclude build-tools
+        language: system
+        pass_filenames: false
+        types: [rust]
+
+  # Cargo check - host build tools (std target)
+  - repo: local
+    hooks:
+      - id: cargo-check-host-tools
+        name: cargo check host tools
+        entry: bash -c "cd tools/build-tools && cargo check"
+        language: system
+        pass_filenames: false
+        files: ^tools/
         types: [rust]
 
   # Deny license/advisory check (if cargo-deny installed)

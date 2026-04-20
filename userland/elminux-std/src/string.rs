@@ -2,9 +2,11 @@
 //!
 //! UTF-8 string, no C string compatibility.
 
+pub use alloc::string::String;
+
 use alloc::vec::Vec;
 
-/// Elminux string type (UTF-8)
+/// Elminux custom string type (UTF-8) - alternative to standard String
 pub struct ElString {
     bytes: Vec<u8>,
 }
