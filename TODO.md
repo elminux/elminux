@@ -121,11 +121,11 @@ Status tags: [ ] todo | [x] done | [~] in-progress | [!] blocked
   - [ ] 4.12.2 Document bump procedure in CONTRIBUTING.md
 
 ### 5. Memory Manager (`elminux-mm`)
-- [ ] 5.1 Physical memory manager
-  - [ ] 5.1.1 Parse memory map from Limine boot info
-  - [ ] 5.1.2 Implement buddy allocator (frame granularity: 4KB)
-  - [ ] 5.1.3 `alloc_frame()` / `free_frame()`
-  - [ ] 5.1.4 Track reserved regions (kernel, firmware, ACPI)
+- [x] 5.1 Physical memory manager
+  - [x] 5.1.1 Parse memory map from PVH boot info (e820 format)
+  - [x] 5.1.2 Implement buddy allocator (frame granularity: 4KB)
+  - [x] 5.1.3 `alloc_frame()` / `free_frame()`
+  - [x] 5.1.4 Track reserved regions (kernel above 16MB, ACPI, firmware)
 - [ ] 5.2 Virtual memory manager
   - [ ] 5.2.1 4-level page table walker (PML4 → PDPT → PD → PT)
   - [ ] 5.2.2 `map_page(virt, phys, flags)`

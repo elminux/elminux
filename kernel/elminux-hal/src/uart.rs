@@ -97,3 +97,18 @@ pub fn write_str(s: &str) {
         write_byte(byte);
     }
 }
+
+/// Write a 64-bit value in hexadecimal (with 0x prefix).
+pub fn write_hex(value: u64) {
+    write_str("0x");
+    // Print nibbles from most significant to least
+    for i in (0..16).rev() {
+        let nibble = ((value >> (i * 4)) & 0xF) as u8;
+        let hex_char = if nibble < 10 {
+            b'0' + nibble
+        } else {
+            b'a' + (nibble - 10)
+        };
+        write_byte(hex_char);
+    }
+}

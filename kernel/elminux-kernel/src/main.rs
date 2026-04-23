@@ -61,6 +61,7 @@ use elminux_hal::apic;
 use elminux_hal::gdt;
 use elminux_hal::idt;
 use elminux_hal::uart;
+use elminux_mm;
 
 mod print;
 
@@ -105,6 +106,9 @@ unsafe fn parse_boot_info(boot_info: u64) {
     } else {
         println!("[BOOT] No RSDP provided in boot info");
     }
+
+    // 5.1 Initialize physical memory manager with e820 memory map
+    elminux_mm::init_from_e820(info.memmap_paddr, info.memmap_entries);
 }
 
 /// Kernel entry point - called by PVH 32-bit trampoline.
@@ -151,6 +155,35 @@ pub extern "C" fn _start(boot_info: u64) -> ! {
     }
 
     println!("[BOOT] Kernel boot sequence complete");
+    println!();
+
+    // Test frame allocation (Milestone 5.4)
+    println!("[TEST] Allocating 3 physical frames...");
+    let frame1 = elminux_mm::pmm::alloc_frame();
+    let frame2 = elminux_mm::pmm::alloc_frame();
+    let frame3 = elminux_mm::pmm::alloc_frame();
+
+    match (frame1, frame2, frame3) {
+        (Some(f1), Some(f2), Some(f3)) => {
+            println!("[TEST] Allocated frames:");
+            println!("       Frame 1: {:#x}", f1);
+            println!("       Frame 2: {:#x}", f2);
+            println!("       Frame 3: {:#x}", f3);
+
+            // Free the frames
+            unsafe {
+                elminux_mm::pmm::free_frame(f1);
+                elminux_mm::pmm::free_frame(f2);
+                elminux_mm::pmm::free_frame(f3);
+            }
+            println!("[TEST] All frames freed successfully");
+            println!("[TEST] PMM test PASSED");
+        }
+        _ => {
+            println!("[TEST] PMM allocation FAILED (got {:?}, {:?}, {:?})", frame1, frame2, frame3);
+        }
+    }
+
     println!();
 
     // TODO: Initialize memory manager
