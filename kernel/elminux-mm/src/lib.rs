@@ -50,10 +50,7 @@ pub unsafe fn init_from_e820(memmap_paddr: u64, entries: u32) {
         return;
     }
 
-    let slice = core::slice::from_raw_parts(
-        memmap_paddr as *const E820Entry,
-        entries as usize,
-    );
+    let slice = core::slice::from_raw_parts(memmap_paddr as *const E820Entry, entries as usize);
 
     // Convert e820 entries to MemoryRegion format and find a suitable PMM region
     // We need a contiguous usable region that doesn't overlap with the kernel.

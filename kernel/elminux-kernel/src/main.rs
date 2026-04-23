@@ -180,7 +180,10 @@ pub extern "C" fn _start(boot_info: u64) -> ! {
             println!("[TEST] PMM test PASSED");
         }
         _ => {
-            println!("[TEST] PMM allocation FAILED (got {:?}, {:?}, {:?})", frame1, frame2, frame3);
+            println!(
+                "[TEST] PMM allocation FAILED (got {:?}, {:?}, {:?})",
+                frame1, frame2, frame3
+            );
         }
     }
 
