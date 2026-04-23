@@ -203,10 +203,13 @@ unsafe fn get_sdt_header(addr: u64) -> SdtHeader {
 pub unsafe fn find_table(rsdp_addr: u64, signature: &[u8; 4]) -> Option<u64> {
     let (rsdp_v1, rsdp_v2) = parse_rsdp(rsdp_addr)?;
 
-    // Use XSDT if available (ACPI 2.0+), otherwise RSDT
-    if let Some(v2) = rsdp_v2 {
+    // Use XSDT if available (ACPI 2.0+) with non-zero address, otherwise fall back to RSDT.
+    // Some firmware has rsdp.revision >= 2 with a valid checksum but xsdt_address == 0.
+    let use_xsdt = rsdp_v2.map(|v2| v2.xsdt_address != 0).unwrap_or(false);
+
+    if use_xsdt {
         // XSDT contains 64-bit physical addresses
-        let xsdt_addr = v2.xsdt_address;
+        let xsdt_addr = rsdp_v2.unwrap().xsdt_address;
         let xsdt_header = get_sdt_header(xsdt_addr);
 
         // Calculate number of entries: (total size - header size) / 8
@@ -218,7 +221,11 @@ pub unsafe fn find_table(rsdp_addr: u64, signature: &[u8; 4]) -> Option<u64> {
 
         for i in 0..entry_count {
             let entry_addr = xsdt_addr + mem::size_of::<SdtHeader>() as u64 + (i * 8) as u64;
-            let table_addr = unsafe { *(entry_addr as *const u64) };
+            // XSDT entries start at offset 36 → not 8-byte aligned. Use read_unaligned.
+            let table_addr = unsafe { core::ptr::read_unaligned(entry_addr as *const u64) };
+            if table_addr == 0 {
+                continue;
+            }
             let table_header = get_sdt_header(table_addr);
 
             if &table_header.signature == signature {
@@ -228,6 +235,9 @@ pub unsafe fn find_table(rsdp_addr: u64, signature: &[u8; 4]) -> Option<u64> {
     } else {
         // RSDT contains 32-bit physical addresses
         let rsdt_addr = rsdp_v1.rsdt_address as u64;
+        if rsdt_addr == 0 {
+            return None;
+        }
         let rsdt_header = get_sdt_header(rsdt_addr);
 
         // Calculate number of entries: (total size - header size) / 4
@@ -240,6 +250,9 @@ pub unsafe fn find_table(rsdp_addr: u64, signature: &[u8; 4]) -> Option<u64> {
         for i in 0..entry_count {
             let entry_addr = rsdt_addr + mem::size_of::<SdtHeader>() as u64 + (i * 4) as u64;
             let table_addr = unsafe { *(entry_addr as *const u32) } as u64;
+            if table_addr == 0 {
+                continue;
+            }
             let table_header = get_sdt_header(table_addr);
 
             if &table_header.signature == signature {
@@ -283,8 +296,15 @@ pub unsafe fn parse_madt(madt_addr: u64) -> Option<ApicInfo> {
     let entries_end = madt_addr + madt_header.header.length as u64;
     let mut current = entries_start;
 
-    while current < entries_end {
+    while current + (mem::size_of::<MadtEntryHeader>() as u64) <= entries_end {
         let entry_header = unsafe { *(current as *const MadtEntryHeader) };
+
+        // Bounds-check: ensure the full entry fits inside the table.
+        let entry_len = entry_header.length as u64;
+        if entry_len < mem::size_of::<MadtEntryHeader>() as u64 || current + entry_len > entries_end
+        {
+            break;
+        }
 
         match entry_header.entry_type {
             0 => {
@@ -304,11 +324,7 @@ pub unsafe fn parse_madt(madt_addr: u64) -> Option<ApicInfo> {
             }
         }
 
-        // Move to next entry; guard against zero-length to prevent infinite loop
-        if entry_header.length < 2 {
-            break;
-        }
-        current += entry_header.length as u64;
+        current += entry_len;
     }
 
     Some(info)

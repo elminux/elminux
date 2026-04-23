@@ -120,12 +120,18 @@ unsafe extern "C" fn generic_exception_handler() {
 /// Generic IRQ handler stub (placeholder)
 ///
 /// Called for all hardware interrupts (32+) until proper PIC/APIC
-/// handling is implemented.
+/// handling is implemented. Sends EOI to the local APIC so the next
+/// interrupt can fire; otherwise the APIC keeps the IRQ in-service
+/// forever and blocks all lower-priority interrupts.
 #[unsafe(naked)]
 unsafe extern "C" fn generic_irq_handler() {
     // SAFETY: Naked function - only inline assembly is allowed here.
+    // Write 0 to Local APIC EOI register (0xFEE000B0) then iretq.
     core::arch::naked_asm!(
-        "cli", // TODO: Save registers, send EOI, call handler
+        "push rax",
+        "mov rax, 0xFEE000B0",
+        "mov dword ptr [rax], 0",
+        "pop rax",
         "iretq",
     );
 }

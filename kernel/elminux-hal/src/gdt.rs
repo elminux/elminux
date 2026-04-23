@@ -206,19 +206,26 @@ impl Gdt {
     }
 
     /// Set the kernel stack pointer in TSS (for interrupt handlers)
-    pub fn set_kernel_stack(rsp0: u64) {
-        unsafe {
-            TSS.set_rsp0(rsp0);
-        }
-    }
-
-    /// Get current TSS pointer
     ///
     /// # Safety
-    /// This returns a mutable reference to a static, which is inherently unsafe.
-    /// Caller must ensure no concurrent access or aliasing occurs.
-    pub unsafe fn get_tss() -> &'static mut Tss {
-        &mut TSS
+    /// Mutates a global `static mut TSS`. Caller must ensure no concurrent
+    /// access from another CPU or interrupt handler (data race). This will
+    /// need a proper lock once SMP is enabled.
+    pub unsafe fn set_kernel_stack(rsp0: u64) {
+        let tss = &raw mut TSS;
+        unsafe { (*tss).set_rsp0(rsp0) };
+    }
+
+    /// Get a raw pointer to the current TSS.
+    ///
+    /// Returns a raw pointer rather than `&'static mut` because constructing
+    /// a `&mut` to a `static mut` trivially violates aliasing rules — any
+    /// second call (or any shared reference) would cause UB.
+    ///
+    /// # Safety
+    /// Caller must serialize access and never dereference concurrently.
+    pub unsafe fn tss_ptr() -> *mut Tss {
+        &raw mut TSS
     }
 }
 

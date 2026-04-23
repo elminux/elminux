@@ -102,50 +102,52 @@ pub unsafe fn write64(addr: u64, value: u64) {
     ptr::write_volatile(addr as *mut u64, value);
 }
 
-/// Memory fence: ensures all prior memory operations complete before continuing
+/// Full memory fence (sequentially consistent).
 ///
-/// This is a full memory fence (sequentially consistent) suitable for
-/// synchronizing with MMIO operations.
+/// Use when ordering with MMIO is required in both directions. Emits `mfence`
+/// on x86-64.
 #[inline]
 pub fn fence() {
-    // Use compiler fence for ordering guarantees
     core::sync::atomic::fence(core::sync::atomic::Ordering::SeqCst);
 }
 
-/// Memory fence after MMIO write: ensures write completes before continuing
+/// Release fence: prior writes become visible before the next store.
 ///
-/// Use this after writing to MMIO registers that trigger hardware actions.
+/// Use *before* an MMIO write whose side-effect depends on earlier stores
+/// being observable to the device (e.g., filling a descriptor then ringing
+/// a doorbell).
 #[inline]
 pub fn fence_write() {
-    core::sync::atomic::fence(core::sync::atomic::Ordering::SeqCst);
+    core::sync::atomic::fence(core::sync::atomic::Ordering::Release);
 }
 
-/// Memory fence before MMIO read: ensures prior operations complete before read
+/// Acquire fence: subsequent loads observe prior stores from the device.
 ///
-/// Use this before reading MMIO registers to ensure prior writes are visible.
+/// Use *after* an MMIO read whose result gates subsequent loads (e.g.,
+/// reading a status register before reading a buffer).
 #[inline]
 pub fn fence_read() {
-    core::sync::atomic::fence(core::sync::atomic::Ordering::SeqCst);
+    core::sync::atomic::fence(core::sync::atomic::Ordering::Acquire);
 }
 
-/// Read 32-bit MMIO value with acquire semantics (for device synchronization)
+/// Read 32-bit MMIO value with acquire semantics (for device synchronization).
 ///
 /// # Safety
 /// Same as `read32`, but provides acquire ordering for synchronization.
 #[inline]
 pub unsafe fn read32_acquire(addr: u64) -> u32 {
     let value = read32(addr);
-    fence();
+    fence_read();
     value
 }
 
-/// Write 32-bit MMIO value with release semantics (for device synchronization)
+/// Write 32-bit MMIO value with release semantics (for device synchronization).
 ///
 /// # Safety
 /// Same as `write32`, but provides release ordering for synchronization.
 #[inline]
 pub unsafe fn write32_release(addr: u64, value: u32) {
-    fence();
+    fence_write();
     write32(addr, value);
 }
 

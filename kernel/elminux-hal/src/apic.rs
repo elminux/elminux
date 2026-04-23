@@ -313,8 +313,15 @@ pub unsafe fn init_timer(vector: u8, hz: u64) {
     // Calibrate or estimate timer frequency
     let timer_freq = calibrate_timer();
 
-    // Calculate initial count for desired frequency
-    let initial_count = (timer_freq / hz) as u32;
+    // Guard against hz=0 (div-by-zero) and overflow when casting to u32.
+    // hz=0 would panic; very small hz produces count > u32::MAX and would wrap.
+    let ticks = if hz == 0 {
+        u32::MAX
+    } else {
+        (timer_freq / hz).min(u32::MAX as u64) as u32
+    };
+    // initial_count == 0 disables the timer per SDM; clamp to 1.
+    let initial_count = ticks.max(1);
 
     // Configure timer in periodic mode
     configure_timer(vector, initial_count, true);
