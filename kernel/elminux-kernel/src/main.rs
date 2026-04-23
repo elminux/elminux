@@ -2,12 +2,42 @@
 //!
 //! The kernel is a hybrid design: trusted core runs in kernel space,
 //! drivers run in user space with capability-based IPC.
+//!
+//! Boot protocol: PVH (Xen) via 32-bit trampoline. QEMU passes a
+//! `hvm_start_info` structure pointer in %rdi (first SysV AMD64 arg).
 
 #![no_std]
 #![no_main]
 
 use core::arch::global_asm;
 use core::panic::PanicInfo;
+
+/// PVH start info structure (Xen HVM start_info layout).
+/// QEMU's -kernel boot provides this at the 32-bit entry point.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct HvmStartInfo {
+    /// Signature: "xen" (0x656e78) for Xen HVM, or 0 if not present
+    pub magic: u32,
+    /// Version of this structure (currently 1)
+    pub version: u32,
+    /// Flags (bit 0: 64-bit)
+    pub flags: u32,
+    /// Number of modules loaded
+    pub nr_modules: u32,
+    /// Physical address of module list (hvm_modlist_entry array)
+    pub modlist_paddr: u64,
+    /// Physical address of command line (null-terminated)
+    pub cmdline_paddr: u64,
+    /// Physical address of RSDP (ACPI root)
+    pub rsdp_paddr: u64,
+    /// Physical address of memory map (e820 entries)
+    pub memmap_paddr: u64,
+    /// Number of memory map entries
+    pub memmap_entries: u32,
+    /// Reserved
+    pub reserved: u32,
+}
 
 // PVH 32-bit entry trampoline (enables long mode before calling _start)
 global_asm!(include_str!("boot/pvh.s"));
@@ -34,13 +64,59 @@ use elminux_hal::uart;
 
 mod print;
 
-/// Kernel entry point - called by Limine bootloader
+/// Parse boot info and initialize ACPI if RSDP is provided.
+///
+/// # Safety
+/// `boot_info` must be a valid physical address of an `HvmStartInfo`
+/// structure provided by the PVH bootloader. Identity mapping required.
+unsafe fn parse_boot_info(boot_info: u64) {
+    if boot_info == 0 {
+        println!("[BOOT] Warning: no hvm_start_info provided");
+        return;
+    }
+
+    // Identity-mapped assumption: boot_info is a valid physical address.
+    let info = &*(boot_info as *const HvmStartInfo);
+
+    // Basic sanity check: non-zero version and magic
+    if info.version == 0 {
+        println!("[BOOT] Warning: invalid hvm_start_info (version=0)");
+        return;
+    }
+
+    println!(
+        "[BOOT] PVH start info v{}, flags={:08x}",
+        info.version, info.flags
+    );
+
+    // Initialize ACPI if RSDP provided
+    if info.rsdp_paddr != 0 {
+        match elminux_hal::acpi::init(info.rsdp_paddr) {
+            Some(apic_info) => {
+                println!(
+                    "[BOOT] ACPI: {} local APIC(s), {} IO-APIC(s)",
+                    apic_info.processor_count, apic_info.io_apic_count
+                );
+            }
+            None => {
+                println!("[BOOT] Warning: ACPI init failed (continuing without)");
+            }
+        }
+    } else {
+        println!("[BOOT] No RSDP provided in boot info");
+    }
+}
+
+/// Kernel entry point - called by PVH 32-bit trampoline.
+///
+/// # Arguments
+/// * `boot_info` - Physical address of `HvmStartInfo` from QEMU.
 ///
 /// # Safety
 /// This is the first Rust code executed after the bootloader.
 /// We must initialize CPU state before doing anything else.
 #[no_mangle]
-pub extern "C" fn _start() -> ! {
+pub extern "C" fn _start(boot_info: u64) -> ! {
     // 4.1 Initialize HAL
     // SAFETY: We are in early boot, single-threaded, with no concurrent access
     unsafe {
@@ -68,6 +144,12 @@ pub extern "C" fn _start() -> ! {
     println!("[BOOT] IDT initialized");
     println!("[BOOT] UART initialized");
     println!("[BOOT] APIC initialized (PIC disabled, local APIC enabled)");
+
+    // 4.6 Parse ACPI tables from boot info (best practice: early, before MM init)
+    unsafe {
+        parse_boot_info(boot_info);
+    }
+
     println!("[BOOT] Kernel boot sequence complete");
     println!();
 
