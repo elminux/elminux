@@ -19,10 +19,14 @@ mod regs {
     pub const VERSION: u64 = 0x30; // Local APIC Version
     pub const TPR: u64 = 0x80; // Task Priority Register
     pub const EOI: u64 = 0xB0; // End of Interrupt
+    #[allow(dead_code)]
     pub const LDR: u64 = 0xD0; // Logical Destination Register
+    #[allow(dead_code)]
     pub const DFR: u64 = 0xE0; // Destination Format Register
     pub const SPURIOUS: u64 = 0xF0; // Spurious Interrupt Vector
+    #[allow(dead_code)]
     pub const ICR_LOW: u64 = 0x300; // Interrupt Command Register (low)
+    #[allow(dead_code)]
     pub const ICR_HIGH: u64 = 0x310; // Interrupt Command Register (high)
     pub const LVT_TIMER: u64 = 0x320; // LVT Timer
     pub const LVT_THERMAL: u64 = 0x330; // LVT Thermal Sensor
@@ -72,6 +76,7 @@ const PIC2_DATA: u16 = 0xA1;
 const ICW1_INIT: u8 = 0x10;
 const ICW1_ICW4: u8 = 0x01;
 const ICW4_8086: u8 = 0x01;
+#[allow(dead_code)]
 const OCW3_READ_ISR: u8 = 0x0B;
 
 /// Read 32-bit value from local APIC register

@@ -40,7 +40,7 @@ pub struct HvmStartInfo {
 }
 
 // PVH 32-bit entry trampoline (enables long mode before calling _start)
-global_asm!(include_str!("boot/pvh.s"));
+global_asm!(include_str!("boot/pvh.s"), options(att_syntax));
 
 // PVH ELF Note for QEMU direct kernel boot (-kernel flag)
 // QEMU uses the Xen PVH protocol: XEN_ELFNOTE_PHYS32_ENTRY (type 18)
@@ -156,6 +156,26 @@ pub extern "C" fn _start(boot_info: u64) -> ! {
 
     println!("[BOOT] Kernel boot sequence complete");
     println!();
+
+    // 4.10 Identity-map teardown test
+    println!("[TEST] Tearing down PVH identity map (0–4GB)...");
+    unsafe {
+        elminux_mm::vmm::teardown_identity();
+    }
+    println!("[TEST] Identity map cleared — attempting access to low address");
+
+    // This access SHOULD page-fault; the #PF handler prints the pass message.
+    // If we reach the next println!, the test failed.
+    let _probe: u8;
+    unsafe {
+        _probe = core::ptr::read_volatile(0x1000 as *const u8);
+    }
+    // Dead code — we should never get here.  If we do, identity mapping
+    // was NOT torn down and the test has failed.
+    println!(
+        "[TEST] FAILED: read from 0x1000 succeeded — identity map still active ({:?})",
+        _probe
+    );
 
     // Test frame allocation (Milestone 5.4)
     println!("[TEST] Allocating 3 physical frames...");

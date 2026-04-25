@@ -336,7 +336,7 @@ pub unsafe fn parse_madt(madt_addr: u64) -> Option<ApicInfo> {
 /// `rsdp` must be a valid physical address of the RSDP.
 pub unsafe fn init(rsdp: u64) -> Option<ApicInfo> {
     // Parse RSDP
-    let (rsdp_v1, rsdp_v2) = parse_rsdp(rsdp)?;
+    let (_rsdp_v1, rsdp_v2) = parse_rsdp(rsdp)?;
 
     // Log ACPI version
     let version = if rsdp_v2.is_some() { "2.0+" } else { "1.0" };

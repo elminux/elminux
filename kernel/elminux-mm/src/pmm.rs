@@ -47,26 +47,28 @@ static mut BUDDY_ALLOC: BuddyAllocator = BuddyAllocator {
 /// The memory region [base, base + total_frames * PAGE_SIZE) must be
 /// identity-mapped and not already in use.
 pub unsafe fn init(base: u64, total_frames: usize) {
-    let alloc = &mut BUDDY_ALLOC;
-    alloc.base_addr = base;
-    alloc.total_frames = total_frames.min(MAX_BLOCKS);
+    let alloc = &raw mut BUDDY_ALLOC;
+    (*alloc).base_addr = base;
+    (*alloc).total_frames = total_frames.min(MAX_BLOCKS);
 
     // Clear all allocation bits
-    for word in alloc.allocated.iter_mut() {
+    for word in (*alloc).allocated.iter_mut() {
         word.store(0, Ordering::Relaxed);
     }
 
     // Clear free lists
-    for list in alloc.free_lists.iter_mut() {
+    for list in (*alloc).free_lists.iter_mut() {
         list.store(u64::MAX, Ordering::Relaxed);
     }
 
     // Add all frames to free list at the highest possible order
     // For simplicity, we add them as order 0 (single pages)
     // TODO: Coalesce contiguous regions into larger order blocks
-    let frames = alloc.total_frames;
+    let frames = (*alloc).total_frames;
     for i in (0..frames).rev() {
-        push_free_block(0, i);
+        unsafe {
+            push_free_block(0, i);
+        }
     }
 
     elminux_hal::uart::write_str("[PMM] Buddy allocator initialized: ");
@@ -80,20 +82,27 @@ pub unsafe fn init(base: u64, total_frames: usize) {
 /// Returns the physical address, or None if out of memory.
 pub fn alloc_frame() -> Option<u64> {
     // Try to allocate from order 0 (single page)
-    alloc_block(0).map(|idx| unsafe { BUDDY_ALLOC.base_addr + (idx * PAGE_SIZE) as u64 })
+    unsafe {
+        alloc_block(0).map(|idx| {
+            let base = (*(&raw const BUDDY_ALLOC)).base_addr;
+            base + (idx * PAGE_SIZE) as u64
+        })
+    }
 }
 
 /// Free a physical frame.
 /// # Safety
 /// The frame must have been allocated by `alloc_frame` and not already freed.
 pub unsafe fn free_frame(frame: u64) {
-    let offset = frame.saturating_sub(BUDDY_ALLOC.base_addr) as usize;
+    let base = (*(&raw const BUDDY_ALLOC)).base_addr;
+    let total = (*(&raw const BUDDY_ALLOC)).total_frames;
+    let offset = frame.saturating_sub(base) as usize;
     if offset % PAGE_SIZE != 0 {
         // Misaligned frame - ignore
         return;
     }
     let idx = offset / PAGE_SIZE;
-    if idx >= BUDDY_ALLOC.total_frames {
+    if idx >= total {
         // Out of range - ignore
         return;
     }
@@ -101,9 +110,8 @@ pub unsafe fn free_frame(frame: u64) {
 }
 
 /// Allocate a block of given order (2^order pages).
-fn alloc_block(order: usize) -> Option<usize> {
+unsafe fn alloc_block(order: usize) -> Option<usize> {
     let order = order.min(MAX_ORDER);
-    let alloc = unsafe { &BUDDY_ALLOC };
 
     // Try to get a block from the free list
     let idx = pop_free_block(order)?;
@@ -117,11 +125,6 @@ fn alloc_block(order: usize) -> Option<usize> {
 /// Free a block of given order at the specified index.
 unsafe fn free_block(order: usize, idx: usize) {
     let order = order.min(MAX_ORDER);
-    let alloc = &BUDDY_ALLOC;
-
-    if idx >= alloc.total_frames {
-        return;
-    }
 
     // Mark as free
     mark_allocated(idx, false);
@@ -134,96 +137,102 @@ unsafe fn free_block(order: usize, idx: usize) {
 
 /// Push a block onto the free list for the given order.
 /// Uses the first 8 bytes of each free block to store the next pointer.
-fn push_free_block(order: usize, idx: usize) {
+unsafe fn push_free_block(order: usize, idx: usize) {
     let order = order.min(MAX_ORDER);
-    let alloc = unsafe { &mut BUDDY_ALLOC };
-
-    if idx >= alloc.total_frames {
-        return;
-    }
-
-    // Get current head
-    let list = &alloc.free_lists[order];
-    let old_head = list.load(Ordering::Relaxed);
-
-    // Write old head as next pointer into the free block's first 8 bytes
-    // Block address = base_addr + idx * PAGE_SIZE
-    let block_addr = alloc.base_addr + (idx * PAGE_SIZE) as u64;
-    let next_ptr = block_addr as *mut u64;
     unsafe {
-        next_ptr.write(old_head);
-    }
+        let alloc = &raw mut BUDDY_ALLOC;
 
-    // Update list head to point to this block
-    list.store(idx as u64, Ordering::Relaxed);
+        if idx >= (*alloc).total_frames {
+            return;
+        }
+
+        // Get current head
+        let list = &(*alloc).free_lists[order];
+        let old_head = list.load(Ordering::Relaxed);
+
+        // Write old head as next pointer into the free block's first 8 bytes
+        // Block address = base_addr + idx * PAGE_SIZE
+        let block_addr = (*alloc).base_addr + (idx * PAGE_SIZE) as u64;
+        let next_ptr = block_addr as *mut u64;
+        next_ptr.write(old_head);
+
+        // Update list head to point to this block
+        list.store(idx as u64, Ordering::Relaxed);
+    }
 }
 
 /// Pop a block from the free list for the given order.
-fn pop_free_block(order: usize) -> Option<usize> {
+unsafe fn pop_free_block(order: usize) -> Option<usize> {
     let order = order.min(MAX_ORDER);
-    let alloc = unsafe { &mut BUDDY_ALLOC };
+    unsafe {
+        let alloc = &raw mut BUDDY_ALLOC;
 
-    let list = &alloc.free_lists[order];
-    let idx = list.load(Ordering::Relaxed);
+        let list = &(*alloc).free_lists[order];
+        let idx = list.load(Ordering::Relaxed);
 
-    if idx == u64::MAX {
-        return None;
+        if idx == u64::MAX {
+            return None;
+        }
+
+        // Read next pointer from the block's first 8 bytes
+        let block_addr = (*alloc).base_addr + (idx as usize * PAGE_SIZE) as u64;
+        let next_ptr = block_addr as *const u64;
+        let next = next_ptr.read();
+
+        // Update list head to point to next block
+        list.store(next, Ordering::Relaxed);
+
+        Some(idx as usize)
     }
-
-    // Read next pointer from the block's first 8 bytes
-    let block_addr = alloc.base_addr + (idx as usize * PAGE_SIZE) as u64;
-    let next_ptr = block_addr as *const u64;
-    let next = unsafe { next_ptr.read() };
-
-    // Update list head to point to next block
-    list.store(next, Ordering::Relaxed);
-
-    Some(idx as usize)
 }
 
 /// Mark a block as allocated or free.
-fn mark_allocated(idx: usize, allocated: bool) {
-    let alloc = unsafe { &mut BUDDY_ALLOC };
+unsafe fn mark_allocated(idx: usize, allocated: bool) {
+    unsafe {
+        let alloc = &raw mut BUDDY_ALLOC;
 
-    if idx >= alloc.total_frames {
-        return;
-    }
+        if idx >= (*alloc).total_frames {
+            return;
+        }
 
-    let word_idx = idx / 64;
-    let bit_idx = idx % 64;
+        let word_idx = idx / 64;
+        let bit_idx = idx % 64;
 
-    if word_idx >= alloc.allocated.len() {
-        return;
-    }
+        if word_idx >= (*alloc).allocated.len() {
+            return;
+        }
 
-    let word = &alloc.allocated[word_idx];
-    let mask = 1u64 << bit_idx;
+        let word = &(*alloc).allocated[word_idx];
+        let mask = 1u64 << bit_idx;
 
-    if allocated {
-        word.fetch_or(mask, Ordering::Relaxed);
-    } else {
-        word.fetch_and(!mask, Ordering::Relaxed);
+        if allocated {
+            word.fetch_or(mask, Ordering::Relaxed);
+        } else {
+            word.fetch_and(!mask, Ordering::Relaxed);
+        }
     }
 }
 
 /// Check if a block is allocated.
 #[allow(dead_code)]
-fn is_allocated(idx: usize) -> bool {
-    let alloc = unsafe { &BUDDY_ALLOC };
+unsafe fn is_allocated(idx: usize) -> bool {
+    unsafe {
+        let alloc = &raw const BUDDY_ALLOC;
 
-    if idx >= alloc.total_frames {
-        return false;
+        if idx >= (*alloc).total_frames {
+            return false;
+        }
+
+        let word_idx = idx / 64;
+        let bit_idx = idx % 64;
+
+        if word_idx >= (*alloc).allocated.len() {
+            return false;
+        }
+
+        let word = (*alloc).allocated[word_idx].load(Ordering::Relaxed);
+        let mask = 1u64 << bit_idx;
+
+        (word & mask) != 0
     }
-
-    let word_idx = idx / 64;
-    let bit_idx = idx % 64;
-
-    if word_idx >= alloc.allocated.len() {
-        return false;
-    }
-
-    let word = alloc.allocated[word_idx].load(Ordering::Relaxed);
-    let mask = 1u64 << bit_idx;
-
-    (word & mask) != 0
 }

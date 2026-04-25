@@ -128,13 +128,13 @@ Status tags: [ ] todo | [x] done | [~] in-progress | [!] blocked
   - [x] 5.1.2 Implement buddy allocator (frame granularity: 4KB)
   - [x] 5.1.3 `alloc_frame()` / `free_frame()`
   - [x] 5.1.4 Track reserved regions (kernel above 16MB, ACPI, firmware)
-- [ ] 5.2 Virtual memory manager
-  - [ ] 5.2.1 4-level page table walker (PML4 → PDPT → PD → PT)
-  - [ ] 5.2.2 `map_page(virt, phys, flags)`
-  - [ ] 5.2.3 `unmap_page(virt)`
-  - [ ] 5.2.4 Higher-half kernel mapping
-  - [ ] 5.2.5 TLB flush on unmap
-  - [ ] 5.2.6 `teardown_identity()` — drop PVH identity map (called from 4.10)
+- [x] 5.2 Virtual memory manager
+  - [x] 5.2.1 4-level page table walker (PML4 → PDPT → PD → PT)
+  - [x] 5.2.2 `map_page(virt, phys, flags)`
+  - [x] 5.2.3 `unmap_page(virt)`
+  - [x] 5.2.4 Higher-half kernel mapping
+  - [x] 5.2.5 TLB flush on unmap
+  - [x] 5.2.6 `teardown_identity()` — drop PVH identity map (called from 4.10)
 - [ ] 5.3 Kernel heap allocator
   - [ ] 5.3.1 Slab allocator for fixed-size kernel objects
   - [ ] 5.3.2 Global allocator registration (`#[global_allocator]`)

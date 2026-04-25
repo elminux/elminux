@@ -76,7 +76,7 @@ static mut IDT_DESCRIPTOR: IdtDescriptor = IdtDescriptor { limit: 0, base: 0 };
 /// Must be called after GDT is initialized and before interrupts are enabled.
 /// This function modifies critical CPU state.
 pub unsafe fn init() {
-    let idt = &mut IDT;
+    let idt = core::ptr::addr_of_mut!(IDT);
 
     // Set up CPU exception handlers (0-31)
     // For now, use a generic handler stub that halts
@@ -84,12 +84,15 @@ pub unsafe fn init() {
 
     // Set handler for each exception
     for i in 0..32 {
-        idt.set_handler(i, generic_exception_handler as u64);
+        (*idt).set_handler(i, generic_exception_handler as *const () as u64);
     }
+
+    // Override vector 14 (page fault) with dedicated handler for testing
+    (*idt).set_handler(14, page_fault_handler as *const () as u64);
 
     // Set up IRQ stubs (32-255) - these will be used for hardware interrupts
     for i in 32..IDT_ENTRIES {
-        idt.set_handler(i, generic_irq_handler as u64);
+        (*idt).set_handler(i, generic_irq_handler as *const () as u64);
     }
 
     // Load IDT
@@ -100,7 +103,7 @@ pub unsafe fn init() {
 
     core::arch::asm!(
         "lidt [{0}]",
-        in(reg) &IDT_DESCRIPTOR,
+        in(reg) core::ptr::addr_of!(IDT_DESCRIPTOR),
     );
 }
 
@@ -115,6 +118,68 @@ unsafe extern "C" fn generic_exception_handler() {
         "cli", // TODO: Save registers, print exception info, halt
         "2:", "hlt", "jmp 2b",
     );
+}
+
+/// Page fault handler (vector 14).
+///
+/// Page faults push an error code on the stack automatically.
+/// We read CR2 (faulting address) and pass it to a Rust handler.
+#[unsafe(naked)]
+unsafe extern "C" fn page_fault_handler() {
+    core::arch::naked_asm!(
+        // Save scratch registers (System V AMD64 callee-saved are
+        // rbx, rbp, r12-r15; we save the caller-saved ones)
+        "push rax",
+        "push rcx",
+        "push rdx",
+        "push rsi",
+        "push rdi",
+        "push r8",
+        "push r9",
+        "push r10",
+        "push r11",
+        // Pass CR2 (faulting linear address) as first argument in RDI
+        "mov rdi, cr2",
+        "call {handler}",
+        // handler is diverging (-> !), but if it ever returns:
+        "pop r11",
+        "pop r10",
+        "pop r9",
+        "pop r8",
+        "pop rdi",
+        "pop rsi",
+        "pop rdx",
+        "pop rcx",
+        "pop rax",
+        // Pop the error code that the CPU pushed for #PF
+        "add rsp, 8",
+        "iretq",
+        handler = sym page_fault_handler_impl,
+    );
+}
+
+/// Rust implementation of page fault handler.
+///
+/// Prints the faulting address via UART and halts. In the identity-map
+/// teardown test, a fault in the low 4GB range is expected and reported
+/// as pass.
+#[no_mangle]
+extern "C" fn page_fault_handler_impl(addr: u64) -> ! {
+    if addr < 0x1_0000_0000 {
+        // Identity range fault — expected during teardown test
+        crate::uart::write_str("[TEST] Page fault at ");
+        crate::uart::write_hex(addr);
+        crate::uart::write_str(" — identity map teardown working!\n");
+    } else {
+        crate::uart::write_str("[!!!] Unexpected page fault at ");
+        crate::uart::write_hex(addr);
+        crate::uart::write_str("\n");
+    }
+    loop {
+        unsafe {
+            core::arch::asm!("cli; hlt");
+        }
+    }
 }
 
 /// Generic IRQ handler stub (placeholder)
@@ -142,5 +207,6 @@ unsafe extern "C" fn generic_irq_handler() {
 /// Must only be called after `init()` has been called.
 /// Caller must ensure handler is a valid interrupt handler function.
 pub unsafe fn set_handler(index: usize, handler: u64) {
-    IDT.set_handler(index, handler);
+    let idt = core::ptr::addr_of_mut!(IDT);
+    (*idt).set_handler(index, handler);
 }

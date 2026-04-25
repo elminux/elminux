@@ -11,7 +11,6 @@
 //   CR0: PE=1, PG=0
 //   EBX: physical address of hvm_start_info struct
 
-.att_syntax prefix
 .code32
 .section .boot.text, "ax"
 .global pvh_start
@@ -95,6 +94,8 @@ pvh_gdt_descriptor:
 // ─── Minimal identity-mapped page tables for first 4GB ──────────────────────
 // PML4[0] → PDPT
 // PDPT[0..3] → 4 × 1GB huge pages covering 0–4GB identity mapped
+.global pvh_pml4
+.global pvh_pdpt
 .align 4096
 pvh_pml4:
     .quad pvh_pdpt + 3      // present + writable

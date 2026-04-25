@@ -20,9 +20,9 @@ members = [
     "userland/elminux-std",
     "userland/epkg",
     "userland/elinit",
-    "userland/modsh",
     "tools/build-tools",
 ]
+exclude = ["userland/modsh"]
 
 [workspace.package]
 version = "0.1.0"
