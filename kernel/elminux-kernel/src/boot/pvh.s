@@ -59,25 +59,38 @@ pvh_long_mode:
     mov %ax, %fs
     mov %ax, %gs
 
-    // Set up a boot stack
+    // Set up a boot stack (still using identity-mapped low VA — pvh_boot_stack
+    // lives in .boot.text which is linked at low phys).
     lea (pvh_boot_stack_top), %rsp
 
-    // Zero BSS (Rust requires it)
-    lea (__bss_start), %rdi
-    lea (__bss_end), %rcx
+    // Far-jump to the higher-half entry so all subsequent fetches use
+    // higher-half virtual addresses.  PML4[256] aliases 0–4GB to the
+    // same PDPT (see static page tables below).
+    movabs $higher_half_entry, %rax
+    jmp *%rax
+
+// ─── .text section (linked at higher-half VA) ──────────────────────────────
+.section .text, "ax"
+higher_half_entry:
+    // Zero BSS now — __bss_start/__bss_end are higher-half symbols only
+    // reachable in 64-bit mode after the higher-half jump.
+    movabs $__bss_start, %rdi
+    movabs $__bss_end, %rcx
     sub %rdi, %rcx
     xor %al, %al
     rep stosb
 
-    // Jump to 64-bit Rust kernel entry
-    // Pass hvm_start_info in %rdi (first SysV arg) — zero-extend from %ebp
-    movl %ebp, %edi         // zero-extend hvm_start_info to 64-bit in %rdi
+    // Pass hvm_start_info in %rdi (first SysV arg) — zero-extend from %ebp.
+    movl %ebp, %edi
     xorl %ebp, %ebp         // clear %rbp to mark outermost stack frame
     call _start
 
     // Should never return
 1:  hlt
     jmp 1b
+
+// ─── back to .boot.text for static GDT / page tables / boot stack ──────────
+.section .boot.text, "ax"
 
 // ─── Minimal GDT for 64-bit boot ────────────────────────────────────────────
 .align 8
@@ -91,15 +104,24 @@ pvh_gdt_descriptor:
     .word pvh_gdt_end - pvh_gdt - 1
     .long pvh_gdt
 
-// ─── Minimal identity-mapped page tables for first 4GB ──────────────────────
-// PML4[0] → PDPT
-// PDPT[0..3] → 4 × 1GB huge pages covering 0–4GB identity mapped
+// ─── Minimal page tables for first 4GB ──────────────────────────────────────
+// PML4[0]   → PDPT  (identity map 0–4GB; required by 32-bit trampoline
+//                    and by early Rust code that touches phys addresses)
+// PML4[256] → PDPT  (same PDPT, aliased into the higher half so that
+//                    KERNEL_BASE + phys resolves to phys after the
+//                    higher-half far-jump)
+// PDPT[0..3] → 4 × 1GB huge pages covering 0–4GB
+//
+// Index 256 corresponds to virtual address 0xFFFF_8000_0000_0000 — the
+// canonical higher-half start used as KERNEL_BASE.
 .global pvh_pml4
 .global pvh_pdpt
 .align 4096
 pvh_pml4:
-    .quad pvh_pdpt + 3      // present + writable
-    .fill 511, 8, 0
+    .quad pvh_pdpt + 3      // [0]   identity (present + writable)
+    .fill 255, 8, 0
+    .quad pvh_pdpt + 3      // [256] higher-half alias (same PDPT)
+    .fill 255, 8, 0
 
 .align 4096
 pvh_pdpt:

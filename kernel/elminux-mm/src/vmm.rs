@@ -13,7 +13,20 @@ pub const PAGE_SIZE_U64: u64 = 4096;
 /// Higher-half base address for kernel mapping.
 pub const KERNEL_BASE: u64 = 0xFFFF_8000_0000_0000;
 
+/// Mask isolating the physical-address bits of a page-table entry
+/// (bits 12..51 on current x86_64; bit 63 is NX).  Bits 52..62 are
+/// reserved/ignored by the MMU and may be used by software.
+pub const PTE_ADDR_MASK: u64 = 0x000F_FFFF_FFFF_F000;
+
 use crate::pmm;
+
+/// Translate a physical address into the higher-half virtual address
+/// that maps it (`KERNEL_BASE + phys`).  Used to dereference page-table
+/// entries and other physical memory after the identity map is dropped.
+#[inline]
+pub fn phys_to_virt(phys: u64) -> u64 {
+    KERNEL_BASE + phys
+}
 
 // ─── PTE flag bits (x86_64, 4-level paging) ─────────────────────────────────
 
@@ -108,7 +121,7 @@ pub unsafe fn walk(pml4: *mut u64, virt: u64) -> Option<*mut u64> {
         return None;
     }
 
-    let pdpt = (unsafe { *pml4e } & !0xFFF) as *mut u64;
+    let pdpt = phys_to_virt(unsafe { *pml4e } & PTE_ADDR_MASK) as *mut u64;
     let pdpte = unsafe { pdpt.add(pdpt_index(virt)) };
     if unsafe { *pdpte } & PTE_PRESENT == 0 {
         return None;
@@ -117,7 +130,7 @@ pub unsafe fn walk(pml4: *mut u64, virt: u64) -> Option<*mut u64> {
         return Some(pdpte);
     }
 
-    let pd = (unsafe { *pdpte } & !0xFFF) as *mut u64;
+    let pd = phys_to_virt(unsafe { *pdpte } & PTE_ADDR_MASK) as *mut u64;
     let pde = unsafe { pd.add(pd_index(virt)) };
     if unsafe { *pde } & PTE_PRESENT == 0 {
         return None;
@@ -126,25 +139,29 @@ pub unsafe fn walk(pml4: *mut u64, virt: u64) -> Option<*mut u64> {
         return Some(pde);
     }
 
-    let pt = (unsafe { *pde } & !0xFFF) as *mut u64;
+    let pt = phys_to_virt(unsafe { *pde } & PTE_ADDR_MASK) as *mut u64;
     let pte = unsafe { pt.add(pt_index(virt)) };
     Some(pte)
 }
 
 // ─── Allocation helper for page-table pages ─────────────────────────────────
 
-/// Allocate a zeroed 4 KiB page table page via the PMM.
+/// Allocate a zeroed 4 KiB page-table page via the PMM.
+///
+/// Returns `(phys, virt)` where `phys` is the physical address to write
+/// into a PTE and `virt = phys_to_virt(phys)` is the higher-half pointer
+/// usable for zeroing or further descent.
 ///
 /// # Safety
-/// PMM must be initialized.  The returned pointer is valid as a virtual
-/// address only while the identity mapping is active (phys == virt).
-unsafe fn alloc_table() -> Option<*mut u64> {
-    let frame = pmm::alloc_frame()?;
-    let ptr = frame as *mut u64;
+/// PMM must be initialized.  The higher-half mapping (PML4[256]) must
+/// already cover the returned frame.
+unsafe fn alloc_table() -> Option<(u64, *mut u64)> {
+    let phys = pmm::alloc_frame()?;
+    let virt = phys_to_virt(phys) as *mut u64;
     unsafe {
-        core::ptr::write_bytes(ptr as *mut u8, 0, PAGE_SIZE);
+        core::ptr::write_bytes(virt as *mut u8, 0, PAGE_SIZE);
     }
-    Some(ptr)
+    Some((phys, virt))
 }
 
 /// Map a virtual page to a physical frame, allocating missing page-table
@@ -167,17 +184,17 @@ pub unsafe fn map_page(pml4: *mut u64, virt: u64, phys: u64, flags: PageFlags) {
 
     let pml4e = unsafe { pml4.add(pml4_index(virt)) };
     if unsafe { *pml4e } & PTE_PRESENT == 0 {
-        let table = alloc_table().expect("OOM allocating PDPT");
-        unsafe { *pml4e = (table as u64) | intermediate };
+        let (phys, _virt) = alloc_table().expect("OOM allocating PDPT");
+        unsafe { *pml4e = phys | intermediate };
     } else if flags.user && (unsafe { *pml4e } & PTE_USER == 0) {
         unsafe { *pml4e |= PTE_USER };
     }
 
-    let pdpt = (unsafe { *pml4e } & !0xFFF) as *mut u64;
+    let pdpt = phys_to_virt(unsafe { *pml4e } & PTE_ADDR_MASK) as *mut u64;
     let pdpte = unsafe { pdpt.add(pdpt_index(virt)) };
     if unsafe { *pdpte } & PTE_PRESENT == 0 {
-        let table = alloc_table().expect("OOM allocating PD");
-        unsafe { *pdpte = (table as u64) | intermediate };
+        let (phys, _virt) = alloc_table().expect("OOM allocating PD");
+        unsafe { *pdpte = phys | intermediate };
     } else if flags.user && (unsafe { *pdpte } & PTE_USER == 0) {
         unsafe { *pdpte |= PTE_USER };
     }
@@ -188,11 +205,11 @@ pub unsafe fn map_page(pml4: *mut u64, virt: u64, phys: u64, flags: PageFlags) {
         );
     }
 
-    let pd = (unsafe { *pdpte } & !0xFFF) as *mut u64;
+    let pd = phys_to_virt(unsafe { *pdpte } & PTE_ADDR_MASK) as *mut u64;
     let pde = unsafe { pd.add(pd_index(virt)) };
     if unsafe { *pde } & PTE_PRESENT == 0 {
-        let table = alloc_table().expect("OOM allocating PT");
-        unsafe { *pde = (table as u64) | intermediate };
+        let (phys, _virt) = alloc_table().expect("OOM allocating PT");
+        unsafe { *pde = phys | intermediate };
     } else if flags.user && (unsafe { *pde } & PTE_USER == 0) {
         unsafe { *pde |= PTE_USER };
     }
@@ -203,9 +220,9 @@ pub unsafe fn map_page(pml4: *mut u64, virt: u64, phys: u64, flags: PageFlags) {
         );
     }
 
-    let pt = (unsafe { *pde } & !0xFFF) as *mut u64;
+    let pt = phys_to_virt(unsafe { *pde } & PTE_ADDR_MASK) as *mut u64;
     let pte = unsafe { pt.add(pt_index(virt)) };
-    unsafe { *pte = (phys & !0xFFF) | flags_to_bits(flags) };
+    unsafe { *pte = (phys & PTE_ADDR_MASK) | flags_to_bits(flags) };
 
     flush_tlb(virt);
 }
@@ -305,31 +322,29 @@ pub unsafe fn map_kernel_higher_half(pml4: *mut u64, phys_start: u64, phys_end: 
 
 /// Tear down the PVH identity map (0–4 GB).
 ///
-/// Clears the four 1 GiB huge-page entries in the PDPT set up by the PVH
-/// trampoline, then flushes the TLB via CR3 reload.
+/// Clears `PML4[0]` (the identity entry installed by the PVH trampoline)
+/// and flushes the TLB.  `PML4[256]` is preserved, keeping the kernel's
+/// higher-half mapping live.  After this returns, accesses to virtual
+/// addresses below `KERNEL_BASE` page-fault.
 ///
 /// # Safety
-/// Must only be called after all identity-mapped accesses (boot info,
-/// ACPI tables, e820 map) are complete.  The kernel itself must not
-/// rely on `virt == phys` after this point.
+/// Must only be called after the kernel has fully transitioned to
+/// higher-half execution (instruction fetches and stack live in the
+/// `KERNEL_BASE + phys` range) and all identity-mapped accesses (boot
+/// info, ACPI tables, e820 map) are complete.
 pub unsafe fn teardown_identity() {
     let pml4_phys = current_cr3();
-    let pml4 = pml4_phys as *mut u64;
-    let pml4e = unsafe { *pml4.add(0) };
+    // Access the PML4 via the higher-half mapping so this works even
+    // after the identity map has been removed in a future call.
+    let pml4 = phys_to_virt(pml4_phys) as *mut u64;
 
-    if pml4e & PTE_PRESENT != 0 {
-        let pdpt = (pml4e & !0xFFF) as *mut u64;
-        unsafe {
-            core::ptr::write_volatile(pdpt.add(0), 0);
-            core::ptr::write_volatile(pdpt.add(1), 0);
-            core::ptr::write_volatile(pdpt.add(2), 0);
-            core::ptr::write_volatile(pdpt.add(3), 0);
-        }
+    unsafe {
+        core::ptr::write_volatile(pml4.add(0), 0);
     }
 
     flush_tlb_all();
 
     elminux_hal::uart::write_str(
-        "[VMM] Identity map 0–4GB torn down (PDPT cleared, TLB flushed)\n",
+        "[VMM] Identity map 0–4GB torn down (PML4[0] cleared, TLB flushed)\n",
     );
 }

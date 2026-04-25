@@ -15,6 +15,16 @@
 
 use elminux_sync::Spinlock;
 
+/// Higher-half base used to translate physical addresses into virtual
+/// addresses; mirrors `vmm::KERNEL_BASE` (kept here as a `const` to avoid
+/// a `vmm → pmm → vmm` import cycle).
+const KERNEL_BASE: u64 = 0xFFFF_8000_0000_0000;
+
+#[inline]
+fn phys_to_virt(phys: u64) -> u64 {
+    KERNEL_BASE + phys
+}
+
 pub const PAGE_SIZE: usize = 4096;
 pub const PAGE_SHIFT: usize = 12; // log2(4096)
 
@@ -162,8 +172,10 @@ unsafe fn push_free_block_locked(alloc: &mut BuddyAllocator, order: usize, idx: 
 
     let old_head = alloc.free_lists[order];
     let block_addr = alloc.base_addr + (idx * PAGE_SIZE) as u64;
-    let next_ptr = block_addr as *mut u64;
-    // SAFETY: identity-mapped, PMM-owned.
+    // Address frames via the higher-half mapping so the free list
+    // remains accessible after the identity map has been dropped.
+    let next_ptr = phys_to_virt(block_addr) as *mut u64;
+    // SAFETY: PMM-owned frame, exclusive access via the lock.
     unsafe { next_ptr.write(old_head) };
 
     alloc.free_lists[order] = idx as u64;
@@ -181,8 +193,8 @@ unsafe fn pop_free_block_locked(alloc: &mut BuddyAllocator, order: usize) -> Opt
     }
 
     let block_addr = alloc.base_addr + (idx as usize * PAGE_SIZE) as u64;
-    let next_ptr = block_addr as *const u64;
-    // SAFETY: identity-mapped, PMM-owned; written by push_free_block_locked.
+    let next_ptr = phys_to_virt(block_addr) as *const u64;
+    // SAFETY: PMM-owned frame; written by push_free_block_locked.
     let next = unsafe { next_ptr.read() };
     alloc.free_lists[order] = next;
 

@@ -10,6 +10,7 @@
 //! slab caches and a lock-free free list for hot sizes.
 
 use crate::pmm;
+use crate::vmm::KERNEL_BASE;
 use alloc::alloc::{GlobalAlloc, Layout};
 use elminux_sync::Spinlock;
 
@@ -45,7 +46,9 @@ impl SlabCache {
             Some(f) => f,
             None => return false,
         };
-        let page = frame as *mut u8;
+        // Address the frame via the higher-half mapping so slab objects
+        // remain accessible after the identity map has been dropped.
+        let page = (KERNEL_BASE + frame) as *mut u8;
         let count = pmm::PAGE_SIZE / self.size;
 
         for i in (0..count).rev() {
