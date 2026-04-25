@@ -1,0 +1,3 @@
+[submodule "userland/modsh"]
+	path = userland/modsh
+	url = https://github.com/modsh-shell/modsh
