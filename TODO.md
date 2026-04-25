@@ -109,16 +109,18 @@ Status tags: [ ] todo | [x] done | [~] in-progress | [!] blocked
   - `make qemu` target configured for x86_64 with APIC+ACPI CPU flags
   - Binary: `target/x86_64-unknown-none/debug/elminux-kernel`
   - Test command: `timeout 5 make qemu` (requires qemu-system-x86_64 installed)
-- [ ] 4.10 Identity-map teardown after `elminux-mm::init()`
-  - [ ] 4.10.1 Drop PVH trampoline's 0–4GB identity map
-  - [ ] 4.10.2 Verify no kernel code still relies on `virt == phys`
-  - [ ] 4.10.3 Add QEMU test: kernel touches identity range post-teardown → page fault (expected)
-- [ ] 4.11 Pin `rust-toolchain.toml` to a dated nightly (`nightly-YYYY-MM-DD`)
-  - [ ] 4.11.1 Replace `channel = "nightly"` with dated nightly
-  - [ ] 4.11.2 Document bump policy: monthly, via PR with build matrix green
-- [ ] 4.12 Pin `userland/modsh` submodule by commit SHA (not branch)
-  - [ ] 4.12.1 Update `.gitmodules` to track specific SHA
-  - [ ] 4.12.2 Document bump procedure in CONTRIBUTING.md
+- [x] 4.10 Identity-map teardown after `elminux-mm::init()`
+  - [x] Drop PVH trampoline's 0–4GB identity map
+  - [x] Verify no kernel code still relies on `virt == phys`
+  - [x] Add QEMU test: kernel touches identity range post-teardown → page fault (expected)
+- [x] 4.11 Pin `rust-toolchain.toml` to a dated nightly (`nightly-2026-04-13`)
+  - [x] Replace `channel = "nightly"` with dated nightly
+  - [x] Document bump policy: monthly, via PR with build matrix green
+- [x] 4.12 Pin `userland/modsh` submodule by commit SHA (not branch)
+  - [x] Convert in-tree `userland/modsh` to a Git submodule first
+  - [x] Update `.gitmodules`
+  - [x] Document bump procedure in CONTRIBUTING.md
+  > Pinned at commit `b9d4076` (`https://github.com/modsh-shell/modsh`).
 
 ### 5. Memory Manager (`elminux-mm`)
 - [x] 5.1 Physical memory manager
