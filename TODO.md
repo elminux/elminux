@@ -135,10 +135,10 @@ Status tags: [ ] todo | [x] done | [~] in-progress | [!] blocked
   - [x] 5.2.4 Higher-half kernel mapping
   - [x] 5.2.5 TLB flush on unmap
   - [x] 5.2.6 `teardown_identity()` — drop PVH identity map (called from 4.10)
-- [ ] 5.3 Kernel heap allocator
-  - [ ] 5.3.1 Slab allocator for fixed-size kernel objects
-  - [ ] 5.3.2 Global allocator registration (`#[global_allocator]`)
-  - [ ] 5.3.3 `alloc` crate available in kernel
+- [x] 5.3 Kernel heap allocator
+  - [x] 5.3.1 Slab allocator for fixed-size kernel objects
+  - [x] 5.3.2 Global allocator registration (`#[global_allocator]`)
+  - [x] 5.3.3 `alloc` crate available in kernel
 - [ ] 5.4 Milestone: kernel allocates heap objects, no panics
 
 ---
