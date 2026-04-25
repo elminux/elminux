@@ -102,17 +102,11 @@ pub unsafe fn init_from_e820(memmap_paddr: u64, entries: u32) {
         };
     }
 
-    // Initialize buddy allocator if we found a suitable region
+    // Initialize buddy allocator if we found a suitable region.
+    // The allocation bitmap lives in BSS (inside BUDDY_ALLOC), so no
+    // physical pages need to be reserved for it.
     if pmm_base != 0 && pmm_pages > 0 {
-        // Reserve some pages for the PMM's own metadata (bitmap)
-        // Bitmap needs 1 bit per page, so 1/64th of the pages for u64 words
-        let bitmap_pages = (pmm_pages + 4095) / (4096 * 64) + 1;
-        let adjusted_base = pmm_base + (bitmap_pages * pmm::PAGE_SIZE) as u64;
-        let adjusted_pages = pmm_pages.saturating_sub(bitmap_pages);
-
-        if adjusted_pages > 0 {
-            pmm::init(adjusted_base, adjusted_pages);
-        }
+        pmm::init(pmm_base, pmm_pages);
     }
 
     // Log memory stats

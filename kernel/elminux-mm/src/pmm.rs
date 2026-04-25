@@ -80,14 +80,14 @@ pub unsafe fn init(base: u64, total_frames: usize) {
 
 /// Allocate a single physical frame (4KB).
 /// Returns the physical address, or None if out of memory.
-pub fn alloc_frame() -> Option<u64> {
+/// # Safety
+/// Caller must ensure no concurrent calls to PMM functions.
+pub unsafe fn alloc_frame() -> Option<u64> {
     // Try to allocate from order 0 (single page)
-    unsafe {
-        alloc_block(0).map(|idx| {
-            let base = (*(&raw const BUDDY_ALLOC)).base_addr;
-            base + (idx * PAGE_SIZE) as u64
-        })
-    }
+    alloc_block(0).map(|idx| {
+        let base = (*(&raw const BUDDY_ALLOC)).base_addr;
+        base + (idx * PAGE_SIZE) as u64
+    })
 }
 
 /// Free a physical frame.

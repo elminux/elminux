@@ -66,7 +66,7 @@ pub fn flags_to_bits(flags: PageFlags) -> u64 {
         bits |= PTE_PRESENT;
     }
     if flags.writable {
-        bits |= PTE_PRESENT | PTE_WRITABLE;
+        bits |= PTE_WRITABLE;
     }
     if flags.user {
         bits |= PTE_USER;
@@ -142,7 +142,7 @@ unsafe fn alloc_table() -> Option<*mut u64> {
     let frame = pmm::alloc_frame()?;
     let ptr = frame as *mut u64;
     unsafe {
-        core::ptr::write_bytes(ptr, 0, PAGE_SIZE);
+        core::ptr::write_bytes(ptr as *mut u8, 0, PAGE_SIZE);
     }
     Some(ptr)
 }
@@ -159,17 +159,27 @@ unsafe fn alloc_table() -> Option<*mut u64> {
 /// PMM must be initialized.  This function is not re-entrant; caller must
 /// serialize concurrent modifications.
 pub unsafe fn map_page(pml4: *mut u64, virt: u64, phys: u64, flags: PageFlags) {
+    // Intermediate entries need PRESENT + WRITABLE, and USER if the leaf is user-accessible.
+    let mut intermediate = PTE_PRESENT | PTE_WRITABLE;
+    if flags.user {
+        intermediate |= PTE_USER;
+    }
+
     let pml4e = unsafe { pml4.add(pml4_index(virt)) };
     if unsafe { *pml4e } & PTE_PRESENT == 0 {
         let table = alloc_table().expect("OOM allocating PDPT");
-        unsafe { *pml4e = (table as u64) | PTE_PRESENT | PTE_WRITABLE };
+        unsafe { *pml4e = (table as u64) | intermediate };
+    } else if flags.user && (unsafe { *pml4e } & PTE_USER == 0) {
+        unsafe { *pml4e |= PTE_USER };
     }
 
     let pdpt = (unsafe { *pml4e } & !0xFFF) as *mut u64;
     let pdpte = unsafe { pdpt.add(pdpt_index(virt)) };
     if unsafe { *pdpte } & PTE_PRESENT == 0 {
         let table = alloc_table().expect("OOM allocating PD");
-        unsafe { *pdpte = (table as u64) | PTE_PRESENT | PTE_WRITABLE };
+        unsafe { *pdpte = (table as u64) | intermediate };
+    } else if flags.user && (unsafe { *pdpte } & PTE_USER == 0) {
+        unsafe { *pdpte |= PTE_USER };
     }
     if unsafe { *pdpte } & PTE_HUGE != 0 {
         panic!(
@@ -182,7 +192,9 @@ pub unsafe fn map_page(pml4: *mut u64, virt: u64, phys: u64, flags: PageFlags) {
     let pde = unsafe { pd.add(pd_index(virt)) };
     if unsafe { *pde } & PTE_PRESENT == 0 {
         let table = alloc_table().expect("OOM allocating PT");
-        unsafe { *pde = (table as u64) | PTE_PRESENT | PTE_WRITABLE };
+        unsafe { *pde = (table as u64) | intermediate };
+    } else if flags.user && (unsafe { *pde } & PTE_USER == 0) {
+        unsafe { *pde |= PTE_USER };
     }
     if unsafe { *pde } & PTE_HUGE != 0 {
         panic!(
@@ -204,6 +216,11 @@ pub unsafe fn map_page(pml4: *mut u64, virt: u64, phys: u64, flags: PageFlags) {
 /// `pml4` must be a valid virtual-address pointer to the root page table.
 pub unsafe fn unmap_page(pml4: *mut u64, virt: u64) {
     if let Some(pte) = walk(pml4, virt) {
+        // Refuse to zero a huge-page entry (1 GiB or 2 MiB) — that would
+        // silently unmap far more than a single 4 KiB page.
+        if unsafe { *pte } & PTE_HUGE != 0 {
+            return;
+        }
         unsafe { core::ptr::write_volatile(pte, 0) };
         flush_tlb(virt);
     }
