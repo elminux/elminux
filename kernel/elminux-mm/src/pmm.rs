@@ -5,8 +5,15 @@
 //! The buddy allocator divides memory into power-of-2 sized blocks.
 //! Minimum allocation unit is 4KB (order 0). Maximum block size is
 //! 4MB (order 10, 1024 pages).
+//!
+//! All shared state lives under a single `Spinlock<BuddyAllocator>`.
+//!
+//! # Roadmap
+//! Per `ARCHITECTURE.md` §Known Risks, v0.5+ replaces the single global
+//! spinlock with per-CPU slab caches and a lock-free free list for hot
+//! sizes.  The current design is intentionally simple and correct.
 
-use core::sync::atomic::{AtomicU64, Ordering};
+use elminux_sync::Spinlock;
 
 pub const PAGE_SIZE: usize = 4096;
 pub const PAGE_SHIFT: usize = 12; // log2(4096)
@@ -14,61 +21,67 @@ pub const PAGE_SHIFT: usize = 12; // log2(4096)
 /// Maximum order: 4MB blocks (1024 * 4KB)
 pub const MAX_ORDER: usize = 10;
 
-/// Maximum number of blocks we can track (supports up to ~4GB RAM)
+/// Maximum number of blocks we can track (supports up to ~4GB RAM).
 pub const MAX_BLOCKS: usize = 1024 * 1024; // 1M blocks = 4GB at 4KB per block
 
-/// Buddy allocator state
+/// Sentinel for an empty free list.
+const FREE_LIST_EMPTY: u64 = u64::MAX;
+
+/// Buddy allocator state.
 pub struct BuddyAllocator {
-    /// Base physical address of the managed memory region
+    /// Base physical address of the managed memory region.
     base_addr: u64,
-    /// Total number of 4KB frames managed
+    /// Total number of 4KB frames managed.
     total_frames: usize,
-    /// Free lists: one per order (0..=MAX_ORDER)
-    /// Each entry is the index of the first free block in that order,
-    /// or usize::MAX if the list is empty.
-    free_lists: [AtomicU64; MAX_ORDER + 1],
-    /// Bitmap tracking which blocks are allocated (1 = allocated, 0 = free)
+    /// Free lists: one per order (0..=MAX_ORDER).  Each entry is the
+    /// index of the first free block in that order, or `FREE_LIST_EMPTY`.
+    free_lists: [u64; MAX_ORDER + 1],
+    /// Bitmap tracking which blocks are allocated (1 = allocated).
     /// Each bit represents one 4KB block.
-    allocated: [AtomicU64; MAX_BLOCKS / 64],
+    allocated: [u64; MAX_BLOCKS / 64],
 }
 
-/// Global buddy allocator instance (statically allocated)
-static mut BUDDY_ALLOC: BuddyAllocator = BuddyAllocator {
-    base_addr: 0,
-    total_frames: 0,
-    free_lists: [const { AtomicU64::new(u64::MAX) }; MAX_ORDER + 1],
-    allocated: [const { AtomicU64::new(0) }; MAX_BLOCKS / 64],
-};
+impl BuddyAllocator {
+    const fn new() -> Self {
+        Self {
+            base_addr: 0,
+            total_frames: 0,
+            free_lists: [FREE_LIST_EMPTY; MAX_ORDER + 1],
+            allocated: [0; MAX_BLOCKS / 64],
+        }
+    }
+}
+
+/// Global buddy allocator instance.
+static BUDDY_ALLOC: Spinlock<BuddyAllocator> = Spinlock::new(BuddyAllocator::new());
 
 /// Initialize the buddy allocator with a memory region.
 ///
 /// # Safety
 /// Must be called exactly once during early boot, before any allocations.
-/// The memory region [base, base + total_frames * PAGE_SIZE) must be
+/// The memory region `[base, base + total_frames * PAGE_SIZE)` must be
 /// identity-mapped and not already in use.
 pub unsafe fn init(base: u64, total_frames: usize) {
-    let alloc = &raw mut BUDDY_ALLOC;
-    (*alloc).base_addr = base;
-    (*alloc).total_frames = total_frames.min(MAX_BLOCKS);
+    let mut alloc = BUDDY_ALLOC.lock();
+    alloc.base_addr = base;
+    alloc.total_frames = total_frames.min(MAX_BLOCKS);
 
-    // Clear all allocation bits
-    for word in (*alloc).allocated.iter_mut() {
-        word.store(0, Ordering::Relaxed);
+    // Clear bookkeeping.
+    for word in alloc.allocated.iter_mut() {
+        *word = 0;
+    }
+    for list in alloc.free_lists.iter_mut() {
+        *list = FREE_LIST_EMPTY;
     }
 
-    // Clear free lists
-    for list in (*alloc).free_lists.iter_mut() {
-        list.store(u64::MAX, Ordering::Relaxed);
-    }
-
-    // Add all frames to free list at the highest possible order
-    // For simplicity, we add them as order 0 (single pages)
-    // TODO: Coalesce contiguous regions into larger order blocks
-    let frames = (*alloc).total_frames;
+    // Add all frames to the order-0 free list.
+    // TODO(v0.3+): coalesce contiguous frames into larger-order blocks.
+    let frames = alloc.total_frames;
     for i in (0..frames).rev() {
-        unsafe {
-            push_free_block(0, i);
-        }
+        // SAFETY: the memory region is identity-mapped and exclusively
+        // owned by the PMM.  Writing a u64 at each frame's base to thread
+        // the free list is safe.
+        unsafe { push_free_block_locked(&mut alloc, 0, i) };
     }
 
     elminux_hal::uart::write_str("[PMM] Buddy allocator initialized: ");
@@ -79,160 +92,131 @@ pub unsafe fn init(base: u64, total_frames: usize) {
 }
 
 /// Allocate a single physical frame (4KB).
-/// Returns the physical address, or None if out of memory.
-/// # Safety
-/// Caller must ensure no concurrent calls to PMM functions.
-pub unsafe fn alloc_frame() -> Option<u64> {
-    // Try to allocate from order 0 (single page)
-    alloc_block(0).map(|idx| {
-        let base = (*(&raw const BUDDY_ALLOC)).base_addr;
-        base + (idx * PAGE_SIZE) as u64
-    })
+/// Returns the physical address, or `None` if out of memory.
+pub fn alloc_frame() -> Option<u64> {
+    let mut alloc = BUDDY_ALLOC.lock();
+    // SAFETY: lock guarantees exclusive access to BuddyAllocator.
+    let idx = unsafe { alloc_block_locked(&mut alloc, 0)? };
+    Some(alloc.base_addr + (idx * PAGE_SIZE) as u64)
 }
 
 /// Free a physical frame.
+///
 /// # Safety
-/// The frame must have been allocated by `alloc_frame` and not already freed.
+/// The frame must have been allocated by [`alloc_frame`] and not already freed.
 pub unsafe fn free_frame(frame: u64) {
-    let base = (*(&raw const BUDDY_ALLOC)).base_addr;
-    let total = (*(&raw const BUDDY_ALLOC)).total_frames;
+    let mut alloc = BUDDY_ALLOC.lock();
+    let base = alloc.base_addr;
+    let total = alloc.total_frames;
     let offset = frame.saturating_sub(base) as usize;
     if offset % PAGE_SIZE != 0 {
-        // Misaligned frame - ignore
-        return;
+        return; // misaligned — ignore
     }
     let idx = offset / PAGE_SIZE;
     if idx >= total {
-        // Out of range - ignore
-        return;
+        return; // out of range — ignore
     }
-    free_block(0, idx);
+    // SAFETY: lock guarantees exclusive access; caller asserts the frame is
+    // a valid, once-allocated frame.
+    unsafe { free_block_locked(&mut alloc, 0, idx) };
 }
 
-/// Allocate a block of given order (2^order pages).
-unsafe fn alloc_block(order: usize) -> Option<usize> {
+// ─── Locked helpers (require the caller to hold BUDDY_ALLOC) ────────────────
+
+/// Allocate a block of the given order.  Returns the block index.
+///
+/// # Safety
+/// Caller holds the `BUDDY_ALLOC` lock (i.e. has `&mut BuddyAllocator`).
+unsafe fn alloc_block_locked(alloc: &mut BuddyAllocator, order: usize) -> Option<usize> {
     let order = order.min(MAX_ORDER);
-
-    // Try to get a block from the free list
-    let idx = pop_free_block(order)?;
-
-    // Mark as allocated
-    mark_allocated(idx, true);
-
+    // SAFETY: see function doc.
+    let idx = unsafe { pop_free_block_locked(alloc, order)? };
+    mark_allocated_locked(alloc, idx, true);
     Some(idx)
 }
 
-/// Free a block of given order at the specified index.
-unsafe fn free_block(order: usize, idx: usize) {
+/// Free a block of the given order at the given index.
+///
+/// # Safety
+/// Caller holds the `BUDDY_ALLOC` lock.
+unsafe fn free_block_locked(alloc: &mut BuddyAllocator, order: usize, idx: usize) {
     let order = order.min(MAX_ORDER);
-
-    // Mark as free
-    mark_allocated(idx, false);
-
-    // Try to coalesce with buddy
-    // For now, just add to free list without coalescing
-    // TODO: Implement buddy coalescing
-    push_free_block(order, idx);
+    mark_allocated_locked(alloc, idx, false);
+    // TODO(v0.3+): coalesce with buddy before pushing to free list.
+    // SAFETY: see function doc.
+    unsafe { push_free_block_locked(alloc, order, idx) };
 }
 
 /// Push a block onto the free list for the given order.
-/// Uses the first 8 bytes of each free block to store the next pointer.
-unsafe fn push_free_block(order: usize, idx: usize) {
+///
+/// Uses the first 8 bytes of each free block to store the next-index.
+///
+/// # Safety
+/// Caller holds the lock; the frame's memory is identity-mapped and
+/// owned by the PMM.
+unsafe fn push_free_block_locked(alloc: &mut BuddyAllocator, order: usize, idx: usize) {
     let order = order.min(MAX_ORDER);
-    unsafe {
-        let alloc = &raw mut BUDDY_ALLOC;
-
-        if idx >= (*alloc).total_frames {
-            return;
-        }
-
-        // Get current head
-        let list = &(*alloc).free_lists[order];
-        let old_head = list.load(Ordering::Relaxed);
-
-        // Write old head as next pointer into the free block's first 8 bytes
-        // Block address = base_addr + idx * PAGE_SIZE
-        let block_addr = (*alloc).base_addr + (idx * PAGE_SIZE) as u64;
-        let next_ptr = block_addr as *mut u64;
-        next_ptr.write(old_head);
-
-        // Update list head to point to this block
-        list.store(idx as u64, Ordering::Relaxed);
+    if idx >= alloc.total_frames {
+        return;
     }
+
+    let old_head = alloc.free_lists[order];
+    let block_addr = alloc.base_addr + (idx * PAGE_SIZE) as u64;
+    let next_ptr = block_addr as *mut u64;
+    // SAFETY: identity-mapped, PMM-owned.
+    unsafe { next_ptr.write(old_head) };
+
+    alloc.free_lists[order] = idx as u64;
 }
 
 /// Pop a block from the free list for the given order.
-unsafe fn pop_free_block(order: usize) -> Option<usize> {
+///
+/// # Safety
+/// Caller holds the lock.
+unsafe fn pop_free_block_locked(alloc: &mut BuddyAllocator, order: usize) -> Option<usize> {
     let order = order.min(MAX_ORDER);
-    unsafe {
-        let alloc = &raw mut BUDDY_ALLOC;
+    let idx = alloc.free_lists[order];
+    if idx == FREE_LIST_EMPTY {
+        return None;
+    }
 
-        let list = &(*alloc).free_lists[order];
-        let idx = list.load(Ordering::Relaxed);
+    let block_addr = alloc.base_addr + (idx as usize * PAGE_SIZE) as u64;
+    let next_ptr = block_addr as *const u64;
+    // SAFETY: identity-mapped, PMM-owned; written by push_free_block_locked.
+    let next = unsafe { next_ptr.read() };
+    alloc.free_lists[order] = next;
 
-        if idx == u64::MAX {
-            return None;
-        }
+    Some(idx as usize)
+}
 
-        // Read next pointer from the block's first 8 bytes
-        let block_addr = (*alloc).base_addr + (idx as usize * PAGE_SIZE) as u64;
-        let next_ptr = block_addr as *const u64;
-        let next = next_ptr.read();
-
-        // Update list head to point to next block
-        list.store(next, Ordering::Relaxed);
-
-        Some(idx as usize)
+/// Mark a block as allocated or free in the bitmap.
+fn mark_allocated_locked(alloc: &mut BuddyAllocator, idx: usize, allocated: bool) {
+    if idx >= alloc.total_frames {
+        return;
+    }
+    let word_idx = idx / 64;
+    let bit_idx = idx % 64;
+    if word_idx >= alloc.allocated.len() {
+        return;
+    }
+    let mask = 1u64 << bit_idx;
+    if allocated {
+        alloc.allocated[word_idx] |= mask;
+    } else {
+        alloc.allocated[word_idx] &= !mask;
     }
 }
 
-/// Mark a block as allocated or free.
-unsafe fn mark_allocated(idx: usize, allocated: bool) {
-    unsafe {
-        let alloc = &raw mut BUDDY_ALLOC;
-
-        if idx >= (*alloc).total_frames {
-            return;
-        }
-
-        let word_idx = idx / 64;
-        let bit_idx = idx % 64;
-
-        if word_idx >= (*alloc).allocated.len() {
-            return;
-        }
-
-        let word = &(*alloc).allocated[word_idx];
-        let mask = 1u64 << bit_idx;
-
-        if allocated {
-            word.fetch_or(mask, Ordering::Relaxed);
-        } else {
-            word.fetch_and(!mask, Ordering::Relaxed);
-        }
-    }
-}
-
-/// Check if a block is allocated.
+/// Check whether a block is marked allocated.
 #[allow(dead_code)]
-unsafe fn is_allocated(idx: usize) -> bool {
-    unsafe {
-        let alloc = &raw const BUDDY_ALLOC;
-
-        if idx >= (*alloc).total_frames {
-            return false;
-        }
-
-        let word_idx = idx / 64;
-        let bit_idx = idx % 64;
-
-        if word_idx >= (*alloc).allocated.len() {
-            return false;
-        }
-
-        let word = (*alloc).allocated[word_idx].load(Ordering::Relaxed);
-        let mask = 1u64 << bit_idx;
-
-        (word & mask) != 0
+fn is_allocated_locked(alloc: &BuddyAllocator, idx: usize) -> bool {
+    if idx >= alloc.total_frames {
+        return false;
     }
+    let word_idx = idx / 64;
+    let bit_idx = idx % 64;
+    if word_idx >= alloc.allocated.len() {
+        return false;
+    }
+    (alloc.allocated[word_idx] & (1u64 << bit_idx)) != 0
 }

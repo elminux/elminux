@@ -13,6 +13,7 @@ members = [
     "kernel/elminux-kernel",
     "kernel/elminux-hal",
     "kernel/elminux-mm",
+    "kernel/elminux-sync",
     "kernel/elminux-sched",
     "kernel/elminux-ipc",
     "kernel/elminux-drivers",

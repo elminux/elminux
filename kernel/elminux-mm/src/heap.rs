@@ -1,20 +1,33 @@
 //! Kernel Heap Allocator
 //!
-//! Fixed-size slab caches backed by 4 KiB PMM frames.
-//! Supports allocations up to 4 KiB; larger requests return null.
+//! Fixed-size slab caches backed by 4 KiB PMM frames.  Supports
+//! allocations up to 4 KiB; larger requests return null.
+//!
+//! Shared state lives under a `Spinlock<[SlabCache; N]>`.
+//!
+//! # Roadmap
+//! Per `ARCHITECTURE.md` §Known Risks, v0.5+ replaces this with per-CPU
+//! slab caches and a lock-free free list for hot sizes.
 
 use crate::pmm;
 use alloc::alloc::{GlobalAlloc, Layout};
+use elminux_sync::Spinlock;
 
 // ─── Slab sizes (power-of-two, naturally aligned) ───────────────────────────
 
 const SLAB_SIZES: [usize; 8] = [32, 64, 128, 256, 512, 1024, 2048, 4096];
+const MIN_SLAB_SHIFT: u32 = 5; // 2^5 == 32 == SLAB_SIZES[0]
 
 /// One slab cache: linked list of free objects within PMM frames.
 struct SlabCache {
     size: usize,
     free_list: *mut u8,
 }
+
+// SAFETY: SlabCache only lives inside the Spinlock; concurrent access is
+// mediated by the lock.  Send is required to move the wrapper across
+// threads, which the lock makes safe.
+unsafe impl Send for SlabCache {}
 
 impl SlabCache {
     const fn new(size: usize) -> Self {
@@ -26,9 +39,8 @@ impl SlabCache {
 
     /// Grow this cache by carving a new PMM frame into objects.
     ///
-    /// # Safety
-    /// PMM must be initialized.  Not re-entrant.
-    unsafe fn grow(&mut self) -> bool {
+    /// Returns `false` on PMM OOM.
+    fn grow(&mut self) -> bool {
         let frame = match pmm::alloc_frame() {
             Some(f) => f,
             None => return false,
@@ -36,36 +48,37 @@ impl SlabCache {
         let page = frame as *mut u8;
         let count = pmm::PAGE_SIZE / self.size;
 
-        // Push every object onto the free list.
-        // The first bytes of each free slot hold the next pointer.
         for i in (0..count).rev() {
-            let obj = unsafe { page.add(i * self.size) };
+            // SAFETY: each slot lies inside the freshly-allocated frame.
             unsafe {
+                let obj = page.add(i * self.size);
                 *(obj as *mut *mut u8) = self.free_list;
+                self.free_list = obj;
             }
-            self.free_list = obj;
         }
         true
     }
 
-    /// Pop one object from the free list.
-    ///
-    /// # Safety
-    /// Caller must ensure exclusive access.
-    unsafe fn alloc(&mut self) -> *mut u8 {
+    /// Pop one object from the free list, growing on demand.
+    fn alloc(&mut self) -> *mut u8 {
         if self.free_list.is_null() && !self.grow() {
             return core::ptr::null_mut();
         }
         let obj = self.free_list;
-        self.free_list = unsafe { *(obj as *mut *mut u8) };
+        // SAFETY: obj is non-null and points to a slot inside a PMM frame.
+        unsafe {
+            self.free_list = *(obj as *mut *mut u8);
+        }
         obj
     }
 
     /// Push an object back onto the free list.
     ///
     /// # Safety
-    /// `ptr` must have been returned by `alloc` from this cache.
+    /// `ptr` must have been returned by [`Self::alloc`] from this cache.
     unsafe fn dealloc(&mut self, ptr: *mut u8) {
+        // SAFETY: per contract, `ptr` is a slot of size `self.size`
+        // inside a PMM frame owned by this cache.
         unsafe {
             *(ptr as *mut *mut u8) = self.free_list;
         }
@@ -73,9 +86,9 @@ impl SlabCache {
     }
 }
 
-// ─── Static caches ──────────────────────────────────────────────────────────
+// ─── Global cache table ─────────────────────────────────────────────────────
 
-static mut SLAB_CACHES: [SlabCache; 8] = [
+static SLAB_CACHES: Spinlock<[SlabCache; 8]> = Spinlock::new([
     SlabCache::new(32),
     SlabCache::new(64),
     SlabCache::new(128),
@@ -84,64 +97,49 @@ static mut SLAB_CACHES: [SlabCache; 8] = [
     SlabCache::new(1024),
     SlabCache::new(2048),
     SlabCache::new(4096),
-];
+]);
 
-/// Compute the slab size required for `layout`.
-fn slab_size_for(layout: Layout) -> Option<usize> {
-    let needed = layout.size().next_power_of_two().max(layout.align());
-    for size in SLAB_SIZES {
-        if size >= needed {
-            return Some(size);
-        }
+/// Compute the slab index required for `layout`, or `None` if the
+/// requested size/alignment exceeds the largest slab.
+fn slab_index_for(layout: Layout) -> Option<usize> {
+    let size = layout.size().max(1);
+    let needed = size.next_power_of_two().max(layout.align());
+    let largest = *SLAB_SIZES.last().expect("SLAB_SIZES non-empty");
+    if needed > largest {
+        return None;
     }
-    None
+    let needed_pow2 = needed.next_power_of_two();
+    let shift = needed_pow2.trailing_zeros();
+    Some((shift.saturating_sub(MIN_SLAB_SHIFT)) as usize)
 }
 
-/// Find the cache matching `size` without creating references to mutable statics.
-unsafe fn cache_for_size(size: usize) -> Option<*mut SlabCache> {
-    let caches = core::ptr::addr_of_mut!(SLAB_CACHES) as *mut SlabCache;
-    for i in 0..SLAB_SIZES.len() {
-        let cache = unsafe { caches.add(i) };
-        if unsafe { (*cache).size } == size {
-            return Some(cache);
-        }
-    }
-    None
-}
+// ─── GlobalAlloc implementation ─────────────────────────────────────────────
 
-// ─── GlobalAlloc implementation ───────────────────────────────────────────
-
-/// Slab allocator for kernel heap.
-///
-/// # Safety note
-/// This allocator is **not** currently SMP-safe.  It relies on the kernel
-/// being single-threaded during early boot.  A future spinlock wrapper
-/// must be added before enabling pre-emption or additional cores.
+/// Slab allocator for the kernel heap.
 pub struct SlabAllocator;
 
 unsafe impl GlobalAlloc for SlabAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        let size = match slab_size_for(layout) {
-            Some(s) => s,
+        let idx = match slab_index_for(layout) {
+            Some(i) => i,
             None => return core::ptr::null_mut(),
         };
-        let cache = match cache_for_size(size) {
-            Some(c) => c,
-            None => return core::ptr::null_mut(),
-        };
-        unsafe { (*cache).alloc() }
+        let mut caches = SLAB_CACHES.lock();
+        caches[idx].alloc()
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        let size = match slab_size_for(layout) {
-            Some(s) => s,
+        let idx = match slab_index_for(layout) {
+            Some(i) => i,
             None => return,
         };
-        let cache = match cache_for_size(size) {
-            Some(c) => c,
-            None => return,
-        };
-        unsafe { (*cache).dealloc(ptr) };
+        let mut caches = SLAB_CACHES.lock();
+        // SAFETY: caller satisfies GlobalAlloc::dealloc contract — `ptr`
+        // came from a previous alloc with the same layout, hence the
+        // same slab index.
+        unsafe {
+            caches[idx].dealloc(ptr);
+        }
     }
 }
 
@@ -149,9 +147,6 @@ unsafe impl GlobalAlloc for SlabAllocator {
 #[global_allocator]
 static HEAP_ALLOCATOR: SlabAllocator = SlabAllocator;
 
-/// Initialise heap allocator (pre-warm if desired).
-///
-/// Currently a no-op; slab caches grow on first demand via `grow()`.
-pub fn init() {
-    // Slab caches are lazily populated on first allocation.
-}
+/// Initialise heap allocator.  Currently a no-op; slab caches grow on
+/// demand.  Reserved for future warm-up logic.
+pub fn init() {}

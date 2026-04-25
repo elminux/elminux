@@ -69,6 +69,7 @@ elminux/
 │   ├── elminux-kernel/     # Hybrid kernel core
 │   ├── elminux-hal/        # Hardware abstraction layer (x86_64)
 │   ├── elminux-mm/         # Memory manager (physical + virtual)
+│   ├── elminux-sync/       # Synchronization primitives (spinlocks, etc.)
 │   ├── elminux-sched/      # Scheduler
 │   ├── elminux-ipc/        # IPC primitives (message passing)
 │   ├── elminux-drivers/    # Driver framework + initial drivers

@@ -179,13 +179,9 @@ pub extern "C" fn _start(boot_info: u64) -> ! {
 
     // Test frame allocation (Milestone 5.4)
     println!("[TEST] Allocating 3 physical frames...");
-    let (frame1, frame2, frame3) = unsafe {
-        (
-            elminux_mm::pmm::alloc_frame(),
-            elminux_mm::pmm::alloc_frame(),
-            elminux_mm::pmm::alloc_frame(),
-        )
-    };
+    let frame1 = elminux_mm::pmm::alloc_frame();
+    let frame2 = elminux_mm::pmm::alloc_frame();
+    let frame3 = elminux_mm::pmm::alloc_frame();
 
     match (frame1, frame2, frame3) {
         (Some(f1), Some(f2), Some(f3)) => {

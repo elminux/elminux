@@ -95,7 +95,14 @@ target, and a security review. Promotions are tracked in
 - APIC (interrupt controller)
 - ACPI (power management, device enumeration)
 - Port I/O and MMIO primitives
-- All `unsafe` in the project is contained here by policy
+- All hardware-touching `unsafe` lives here by policy.  Carve-outs:
+  `elminux-mm` (page-table writes via raw pointers) and `elminux-sync`
+  (atomic primitives, manual `Send`/`Sync` impls).
+
+**`elminux-sync`** — Synchronization Primitives
+- `Spinlock<T>` (test-and-set, RAII guard)
+- Future: `IrqSpinlock<T>`, `Once<T>`, ticket locks, RW locks
+- Used by every kernel crate that holds shared mutable state
 
 **`elminux-mm`** — Memory Manager
 - Physical frame allocator (buddy allocator)
