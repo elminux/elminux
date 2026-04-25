@@ -139,7 +139,8 @@ Status tags: [ ] todo | [x] done | [~] in-progress | [!] blocked
   - [x] 5.3.1 Slab allocator for fixed-size kernel objects
   - [x] 5.3.2 Global allocator registration (`#[global_allocator]`)
   - [x] 5.3.3 `alloc` crate available in kernel
-- [ ] 5.4 Milestone: kernel allocates heap objects, no panics
+- [x] 5.4 Milestone: kernel allocates heap objects, no panics
+  - Verified with heap stress test (Box, Vec, mixed-size allocations, fragmentation)
 
 ---
 

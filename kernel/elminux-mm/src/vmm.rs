@@ -320,31 +320,36 @@ pub unsafe fn map_kernel_higher_half(pml4: *mut u64, phys_start: u64, phys_end: 
 
 // ─── Identity-map teardown ──────────────────────────────────────────────────
 
-/// Tear down the PVH identity map (0–4 GB).
+/// Tear down the PVH identity map for low RAM (0–1 GB).
 ///
-/// Clears `PML4[0]` (the identity entry installed by the PVH trampoline)
-/// and flushes the TLB.  `PML4[256]` is preserved, keeping the kernel's
-/// higher-half mapping live.  After this returns, accesses to virtual
-/// addresses below `KERNEL_BASE` page-fault.
+/// Clears PDPT[0] (the 0-1GB 1 GiB huge page).  PDPT[1-3] are preserved
+/// to keep MMIO regions (APIC at 0xFEE00000, etc.) accessible until the
+/// HAL is updated to use `KERNEL_BASE + phys` for MMIO addresses.
+///
+/// After this returns, accesses to 0-1GB via identity addresses will
+/// page-fault, but 1-4GB (including MMIO) remains accessible.
 ///
 /// # Safety
 /// Must only be called after the kernel has fully transitioned to
-/// higher-half execution (instruction fetches and stack live in the
-/// `KERNEL_BASE + phys` range) and all identity-mapped accesses (boot
-/// info, ACPI tables, e820 map) are complete.
+/// higher-half execution and all early boot data in 0-1GB is copied or
+/// no longer needed.
 pub unsafe fn teardown_identity() {
     let pml4_phys = current_cr3();
-    // Access the PML4 via the higher-half mapping so this works even
-    // after the identity map has been removed in a future call.
+    // Access page tables via higher-half mapping.
     let pml4 = phys_to_virt(pml4_phys) as *mut u64;
 
+    // PML4[0] and PML4[256] both point to the same PDPT. Clear only PDPT[0]
+    // (0-1GB) while keeping PDPT[1-3] for MMIO access.
+    let pdpt_phys = unsafe { *pml4.add(0) } & PTE_ADDR_MASK;
+    let pdpt = phys_to_virt(pdpt_phys) as *mut u64;
+
     unsafe {
-        core::ptr::write_volatile(pml4.add(0), 0);
+        core::ptr::write_volatile(pdpt.add(0), 0); // Clear 0-1GB entry
     }
 
     flush_tlb_all();
 
     elminux_hal::uart::write_str(
-        "[VMM] Identity map 0–4GB torn down (PML4[0] cleared, TLB flushed)\n",
+        "[VMM] Identity map 0–1GB torn down (PDPT[0] cleared, 1-4GB including MMIO preserved)\n",
     );
 }
