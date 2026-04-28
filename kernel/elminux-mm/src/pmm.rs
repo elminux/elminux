@@ -119,7 +119,7 @@ pub unsafe fn free_frame(frame: u64) {
     let base = alloc.base_addr;
     let total = alloc.total_frames;
     let offset = frame.saturating_sub(base) as usize;
-    if offset % PAGE_SIZE != 0 {
+    if !offset.is_multiple_of(PAGE_SIZE) {
         return; // misaligned — ignore
     }
     let idx = offset / PAGE_SIZE;

@@ -38,7 +38,15 @@ impl Cap {
     pub fn from_raw(id: u64) -> Self {
         Self(id)
     }
+}
 
+impl Default for Cap {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Cap {
     pub fn as_u64(&self) -> u64 {
         self.0
     }

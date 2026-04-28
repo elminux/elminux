@@ -26,6 +26,7 @@ impl Thread {
 
 /// IPC-based mutex (no user-space spinlock)
 pub struct Mutex<T> {
+    #[allow(dead_code)] // Stored for future IPC-based mutex
     cap: u64,
     data: UnsafeCell<T>,
 }
@@ -41,7 +42,7 @@ impl<T> Mutex<T> {
         }
     }
 
-    pub fn lock(&self) -> MutexGuard<T> {
+    pub fn lock(&self) -> MutexGuard<'_, T> {
         // FIXME(v0.4.0): This is a STUB - no actual lock is acquired.
         // The returned MutexGuard provides DerefMut access without any
         // mutual exclusion. Multiple threads can simultaneously obtain

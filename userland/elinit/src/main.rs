@@ -40,16 +40,21 @@ fn supervise() -> ! {
         // TODO: Monitor driver capabilities
         // TODO: Restart crashed services with backoff
         // TODO: Handle shutdown requests
+        core::hint::spin_loop();
     }
 }
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     main();
-    loop {}
+    loop {
+        core::hint::spin_loop();
+    }
 }
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
-    loop {}
+    loop {
+        core::hint::spin_loop();
+    }
 }

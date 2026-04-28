@@ -70,6 +70,12 @@ impl Tss {
     }
 }
 
+impl Default for Tss {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// GDT descriptor for lgdt instruction
 #[repr(C, packed)]
 pub struct GdtDescriptor {
@@ -226,6 +232,12 @@ impl Gdt {
     /// Caller must serialize access and never dereference concurrently.
     pub unsafe fn tss_ptr() -> *mut Tss {
         &raw mut TSS
+    }
+}
+
+impl Default for Gdt {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

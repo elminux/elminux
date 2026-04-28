@@ -16,7 +16,7 @@ impl ElString {
         Self { bytes: Vec::new() }
     }
 
-    pub fn from_str(s: &str) -> Self {
+    pub fn new_from_str(s: &str) -> Self {
         Self {
             bytes: s.as_bytes().to_vec(),
         }

@@ -65,7 +65,6 @@ use elminux_hal::apic;
 use elminux_hal::gdt;
 use elminux_hal::idt;
 use elminux_hal::uart;
-use elminux_mm;
 
 mod print;
 
@@ -181,7 +180,7 @@ fn heap_stress_test() {
 
         for (round, &size) in sizes.iter().cycle().take(64).enumerate() {
             let pattern = ((round * 7 + 13) & 0xFF) as u8;
-            let data: Vec<u8> = core::iter::repeat(pattern).take(size).collect();
+            let data: Vec<u8> = core::iter::repeat_n(pattern, size).collect();
             boxes.push(data.into_boxed_slice());
         }
 
@@ -248,12 +247,12 @@ fn heap_stress_test() {
     {
         let mut large_boxes: Vec<Box<[u8; 4096]>> = Vec::new();
         for i in 0..10 {
-            let pattern = (0x10 + (i as u8)) & 0xFF;
+            let pattern = 0x10 + (i as u8);
             large_boxes.push(Box::new([pattern; 4096]));
         }
 
         for (i, boxed) in large_boxes.iter().enumerate() {
-            let pattern = (0x10 + (i as u8)) & 0xFF;
+            let pattern = 0x10 + (i as u8);
             assert!(
                 boxed.iter().all(|&x| x == pattern),
                 "Large alloc {} corrupted",

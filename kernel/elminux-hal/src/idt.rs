@@ -42,6 +42,12 @@ impl Idt {
     }
 }
 
+impl Default for Idt {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl IdtEntry {
     pub const fn new() -> Self {
         Self {
@@ -61,6 +67,12 @@ impl IdtEntry {
         self.offset_high = ((handler >> 32) & 0xFFFFFFFF) as u32;
         self.selector = 0x08; // Kernel code segment
         self.type_attr = 0x8E; // Present, ring 0, interrupt gate
+    }
+}
+
+impl Default for IdtEntry {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

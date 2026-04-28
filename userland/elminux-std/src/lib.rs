@@ -42,7 +42,7 @@ pub fn init() {
 /// Panic handler for user space
 #[cfg(not(test))]
 #[panic_handler]
-fn panic(info: &core::panic::PanicInfo) -> ! {
+fn panic(_info: &core::panic::PanicInfo) -> ! {
     // TODO: Print panic message via debug IPC
     // TODO: Call sys_exit(1)
     loop {

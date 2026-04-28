@@ -48,7 +48,17 @@ impl Context {
     }
 }
 
+impl Default for Context {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Perform context switch (assembly)
+///
+/// # Safety
+/// `_from` and `_to` must point to valid Context structures.
+/// Caller must ensure proper register state and stack alignment.
 pub unsafe fn switch_context(_from: &mut Context, _to: &Context) {
     // TODO: Assembly implementation
 }

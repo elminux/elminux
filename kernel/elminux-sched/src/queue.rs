@@ -27,3 +27,9 @@ impl RunQueue {
         self.queue.is_empty()
     }
 }
+
+impl Default for RunQueue {
+    fn default() -> Self {
+        Self::new()
+    }
+}

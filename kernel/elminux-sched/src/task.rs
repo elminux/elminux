@@ -34,3 +34,9 @@ impl Task {
         }
     }
 }
+
+impl Default for Task {
+    fn default() -> Self {
+        Self::new()
+    }
+}

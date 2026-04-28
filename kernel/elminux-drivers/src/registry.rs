@@ -22,6 +22,7 @@ impl Registry {
         }
     }
 
+    #[allow(clippy::result_unit_err)] // Simple error type for stub implementation
     pub fn register(&mut self, name: &'static str, driver: &'static dyn Driver) -> Result<(), ()> {
         if self.count >= 16 {
             return Err(());
@@ -43,6 +44,12 @@ impl Registry {
     }
 }
 
+impl Default for Registry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Global driver registry instance
 // FIXME(v1.0-SMP): `static mut` requires unsafe on every access and has no
 // interior mutability protection. Replace with Mutex<Registry> or spin::Once
@@ -50,6 +57,7 @@ impl Registry {
 static mut REGISTRY: Registry = Registry::new();
 
 /// Register a driver with the system
+#[allow(clippy::result_unit_err)] // Simple error type for stub implementation
 pub fn register(name: &'static str, driver: &'static dyn Driver) -> Result<(), ()> {
     unsafe { REGISTRY.register(name, driver) }
 }

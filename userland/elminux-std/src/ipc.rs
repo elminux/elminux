@@ -16,6 +16,7 @@ pub fn recv(_cap: u64, _buf: &mut [u64]) -> Result<(), RecvError> {
 
 /// Typed channel for type-safe IPC
 pub struct Channel<T> {
+    #[allow(dead_code)] // Stored for future IPC syscall use
     cap: u64,
     _phantom: core::marker::PhantomData<T>,
 }

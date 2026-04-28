@@ -34,7 +34,7 @@ repos:
     hooks:
       - id: clippy-workspace
         name: cargo clippy workspace
-        entry: cargo clippy --workspace --exclude build-tools -- -A static_mut_refs
+        entry: cargo clippy --workspace --exclude build-tools -- -D warnings -A static_mut_refs
         language: system
         pass_filenames: false
         types: [rust]

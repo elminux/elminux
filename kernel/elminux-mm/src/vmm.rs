@@ -273,14 +273,28 @@ impl PageFlags {
     }
 }
 
+impl Default for PageFlags {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 // ─── TLB flush ──────────────────────────────────────────────────────────────
 
 /// Flush the TLB entry for a single virtual address.
+///
+/// # Safety
+/// `virt` must be a valid canonical address. Caller must ensure
+/// TLB flush is safe at this point in execution.
 pub unsafe fn flush_tlb(virt: u64) {
     core::arch::asm!("invlpg [{}]", in(reg) virt, options(nostack));
 }
 
 /// Flush the entire TLB by reloading CR3.
+///
+/// # Safety
+/// Caller must ensure TLB flush is safe at this point in execution
+/// (e.g., no critical sections depending on current mappings).
 pub unsafe fn flush_tlb_all() {
     let cr3: u64;
     unsafe {

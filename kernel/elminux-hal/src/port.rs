@@ -4,7 +4,11 @@
 
 use core::arch::asm;
 
-/// Read 8-bit value from port
+/// Read 8-bit value from port.
+///
+/// # Safety
+/// Caller must ensure `port` is a valid I/O port and the operation
+/// will not cause undefined behavior (e.g., reading from a reserved port).
 #[inline]
 pub unsafe fn inb(port: u16) -> u8 {
     let value: u8;
@@ -12,13 +16,21 @@ pub unsafe fn inb(port: u16) -> u8 {
     value
 }
 
-/// Write 8-bit value to port
+/// Write 8-bit value to port.
+///
+/// # Safety
+/// Caller must ensure `port` is a valid I/O port and the operation
+/// will not cause undefined behavior (e.g., writing to a reserved port).
 #[inline]
 pub unsafe fn outb(port: u16, value: u8) {
     asm!("out dx, al", in("dx") port, in("al") value, options(nomem, nostack, preserves_flags));
 }
 
-/// Read 16-bit value from port
+/// Read 16-bit value from port.
+///
+/// # Safety
+/// Caller must ensure `port` is a valid I/O port and the operation
+/// will not cause undefined behavior.
 #[inline]
 pub unsafe fn inw(port: u16) -> u16 {
     let value: u16;
@@ -26,13 +38,21 @@ pub unsafe fn inw(port: u16) -> u16 {
     value
 }
 
-/// Write 16-bit value to port
+/// Write 16-bit value to port.
+///
+/// # Safety
+/// Caller must ensure `port` is a valid I/O port and the operation
+/// will not cause undefined behavior.
 #[inline]
 pub unsafe fn outw(port: u16, value: u16) {
     asm!("out dx, ax", in("dx") port, in("ax") value, options(nomem, nostack, preserves_flags));
 }
 
-/// Read 32-bit value from port
+/// Read 32-bit value from port.
+///
+/// # Safety
+/// Caller must ensure `port` is a valid I/O port and the operation
+/// will not cause undefined behavior.
 #[inline]
 pub unsafe fn inl(port: u16) -> u32 {
     let value: u32;
@@ -40,7 +60,11 @@ pub unsafe fn inl(port: u16) -> u32 {
     value
 }
 
-/// Write 32-bit value to port
+/// Write 32-bit value to port.
+///
+/// # Safety
+/// Caller must ensure `port` is a valid I/O port and the operation
+/// will not cause undefined behavior.
 #[inline]
 pub unsafe fn outl(port: u16, value: u32) {
     asm!("out dx, eax", in("dx") port, in("eax") value, options(nomem, nostack, preserves_flags));
