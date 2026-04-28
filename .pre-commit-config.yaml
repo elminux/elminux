@@ -60,6 +60,16 @@ repos:
         files: ^tools/
         types: [rust]
 
+  # Cargo doc - ensure documentation builds without warnings
+  - repo: local
+    hooks:
+      - id: cargo-doc
+        name: cargo doc
+        entry: cargo doc --workspace --exclude build-tools --no-deps --document-private-items
+        language: system
+        pass_filenames: false
+        types: [rust]
+
   # Deny license/advisory check (if cargo-deny installed)
   - repo: local
     hooks:

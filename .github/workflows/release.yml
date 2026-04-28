@@ -45,7 +45,8 @@ jobs:
 
       - name: Generate SBOM (cargo-cyclonedx)
         run: |
-          cargo install cargo-cyclonedx
+          cargo install --locked cargo-cyclonedx
+          mkdir -p dist
           cargo cyclonedx --format json --output dist/
 
       - name: Create checksums
@@ -78,13 +79,5 @@ jobs:
             build/elminux.iso.asc
             dist/*.json
           generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload SBOM to release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: dist/*.json
-          append_body: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

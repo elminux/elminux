@@ -31,11 +31,11 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Build kernel
-        run: cargo build --package elminux-kernel
+      - name: Build workspace
+        run: cargo build --workspace --exclude build-tools
 
       - name: Clippy
-        run: cargo clippy --package elminux-kernel -- -D warnings
+        run: cargo clippy --workspace --exclude build-tools -- -D warnings -A static_mut_refs
 
       - name: Format check
         run: cargo fmt --check

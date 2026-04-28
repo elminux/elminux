@@ -153,7 +153,7 @@ pub unsafe fn walk(pml4: *mut u64, virt: u64) -> Option<*mut u64> {
 /// usable for zeroing or further descent.
 ///
 /// # Safety
-/// PMM must be initialized.  The higher-half mapping (PML4[256]) must
+/// PMM must be initialized.  The higher-half mapping (PML4\[256\]) must
 /// already cover the returned frame.
 unsafe fn alloc_table() -> Option<(u64, *mut u64)> {
     let phys = pmm::alloc_frame()?;
@@ -336,7 +336,7 @@ pub unsafe fn map_kernel_higher_half(pml4: *mut u64, phys_start: u64, phys_end: 
 
 /// Tear down the PVH identity map for low RAM (0–1 GB).
 ///
-/// Clears PDPT[0] (the 0-1GB 1 GiB huge page).  PDPT[1-3] are preserved
+/// Clears PDPT\[0\] (the 0-1GB 1 GiB huge page).  PDPT\[1-3\] are preserved
 /// to keep MMIO regions (APIC at 0xFEE00000, etc.) accessible until the
 /// HAL is updated to use `KERNEL_BASE + phys` for MMIO addresses.
 ///
