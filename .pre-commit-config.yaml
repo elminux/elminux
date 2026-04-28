@@ -69,5 +69,4 @@ repos:
         language: system
         pass_filenames: false
         files: Cargo\.(toml|lock)$
-        # Only run if cargo-deny is installed
-        stages: [manual]
+        # Requires cargo-deny to be installed: cargo install cargo-deny
