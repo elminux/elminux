@@ -21,15 +21,8 @@ allow = [
     "ISC",
     "Unicode-DFS-2016",
     "Unicode-3.0",
+    "GPL-3.0",           # Project license
 ]
-deny = [
-    "GPL-1.0",
-    "GPL-2.0",
-    "GPL-3.0",
-]
-copyleft = "deny"
-allow-osi-fsf-free = "either"
-default = "deny"
 unused-allowed-license = "allow"
 confidence-threshold = 0.8
 exceptions = [

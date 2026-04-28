@@ -62,7 +62,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build docs
-        run: cargo doc --no-deps --document-private-items
+        run: cargo doc --workspace --exclude build-tools --no-deps --document-private-items
         env:
           RUSTDOCFLAGS: -D warnings
 
