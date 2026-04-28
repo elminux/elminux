@@ -65,7 +65,9 @@ iso: $(BUILD_DIR)/release/elminux-kernel limine
 		--protective-msdos-label \
 		$(ISO_DIR) \
 		-o elminux.iso
-	$(LIMINE_DIR)/limine bios-install elminux.iso
+	mkdir -p build
+	mv elminux.iso build/
+	$(LIMINE_DIR)/limine bios-install build/elminux.iso
 
 # Run headless tests in QEMU
 test: $(BUILD_DIR)/release/elminux-kernel
@@ -93,7 +95,6 @@ doc:
 clean:
 	cargo clean
 	rm -rf build/
-	rm -f elminux.iso
 	rm -f test.log
 
 # Download and setup Limine bootloader
