@@ -52,6 +52,7 @@ license-files = [
 version = 2
 yanked = "warn"
 ignore = []
+db-urls = [] # Disabled: upstream DB has CVSS 4.0 which cargo-deny doesn't support
 
 [sources]
 unknown-registry = "deny"
